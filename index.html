@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dungeons, Dice & Danger - Test Engine</title>
+  <title>Dungeons, Dice & Danger - Game Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -124,7 +124,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger (Testing Engine)</h2>
+    <h2>Dungeons, Dice & Danger Engine</h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -174,205 +174,7 @@
     const ctx = canvas.getContext('2d');
 
     let calibrationMode = false;
-    let availableSums = new Set();
+    let availablePairs = []; // Stores { sum: X, isDouble: true/false }
     let markHistory = [];
 
-    // Loaded dataset
-    let points = [
-      { "label": "start_2", "x": 0.202, "y": 0.0783 },
-      { "label": "start_9", "x": 0.2008, "y": 0.1422 },
-      { "label": "start_6", "x": 0.2002, "y": 0.2133 },
-      { "label": "start_4", "x": 0.6887, "y": 0.1269 },
-      { "label": "start_5", "x": 0.7149, "y": 0.1944 },
-      { "label": "start_8", "x": 0.7137, "y": 0.2637 },
-      { "label": "start_10", "x": 0.6997, "y": 0.334 },
-      { "label": "start_11", "x": 0.6991, "y": 0.3988 },
-      { "label": "start_7", "x": 0.1575, "y": 0.2565 },
-      { "label": "start_3", "x": 0.1099, "y": 0.2979 },
-      { "label": "start_12", "x": 0.0617, "y": 0.2988 },
-      { "label": "path_7", "x": 0.2966, "y": 0.2232 },
-      { "label": "path_9", "x": 0.2703, "y": 0.3889 },
-      { "label": "path_10", "x": 0.3893, "y": 0.2574 },
-      { "label": "path_9", "x": 0.4387, "y": 0.3069 },
-      { "label": "path_6", "x": 0.482, "y": 0.306 },
-      { "label": "path_8", "x": 0.5289, "y": 0.261 },
-      { "label": "path_7", "x": 0.6009, "y": 0.3322 },
-      { "label": "active_5", "x": 0.3825, "y": 0.515 },
-      { "label": "active_3", "x": 0.3447, "y": 0.2223 },
-      { "label": "active_3", "x": 0.643, "y": 0.1242 },
-      { "label": "active_9", "x": 0.668, "y": 0.2322 },
-      { "label": "active_6", "x": 0.1294, "y": 0.3692 },
-      { "label": "active_10", "x": 0.1996, "y": 0.2782 },
-      { "label": "purple_pup_1", "x": 0.3551, "y": 0.0684 },
-      { "label": "purple_pup_2", "x": 0.3545, "y": 0.0882 },
-      { "label": "purple_pup_3", "x": 0.3551, "y": 0.1107 },
-      { "label": "purple_pup_final", "x": 0.3545, "y": 0.1332 },
-      { "label": "gold_3", "x": 0.6625, "y": 0.5196 },
-      { "label": "gold_11", "x": 0.3173, "y": 0.3558 },
-      { "label": "perk_hp_activator", "x": 0.8924, "y": 0.1621 },
-      { "label": "black_dice_activator", "x": 0.8997, "y": 0.4637 },
-      { "label": "perk_hp_1", "x": 0.8918, "y": 0.2287 },
-      { "label": "perk_hp_2", "x": 0.9247, "y": 0.2269 },
-      { "label": "perk_hp_3", "x": 0.9546, "y": 0.2278 },
-      { "label": "gem_12", "x": 0.4112, "y": 0.1657 },
-      { "label": "gem_2", "x": 0.5039, "y": 0.1981 }
-    ];
-
-    // Add state tracking
-    points.forEach(p => p.marked = false);
-
-    function initCanvas() {
-      canvas.width = img.naturalWidth || img.clientWidth;
-      canvas.height = img.naturalHeight || img.clientHeight;
-      redraw();
-    }
-
-    function redraw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      points.forEach((p, idx) => {
-        const px = p.x * canvas.width;
-        const py = p.y * canvas.height;
-        const radius = canvas.width * 0.012;
-
-        // Check if number matches active dice sums
-        const numVal = parseInt(p.label.replace(/\D/g, ''));
-        const isHighlighted = availableSums.has(numVal);
-
-        // Highlight matched dice numbers
-        if (isHighlighted && !p.marked) {
-          ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
-          ctx.strokeStyle = '#eab308';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(px, py, radius * 1.4, 0, Math.PI * 2);
-          ctx.fill(); ctx.stroke();
-        }
-
-        // Draw Marked states
-        if (p.marked) {
-          if (p.label.startsWith('purple_pup')) {
-            // Draw mini monster damage box
-            ctx.fillStyle = '#dc2626';
-            ctx.fillRect(px - radius/1.5, py - radius/1.5, radius * 1.3, radius * 1.3);
-          } else {
-            // Draw neat X inside box bounds
-            ctx.strokeStyle = '#dc2626';
-            ctx.lineWidth = Math.max(2, canvas.width / 300);
-            ctx.beginPath();
-            ctx.moveTo(px - radius, py - radius); ctx.lineTo(px + radius, py + radius);
-            ctx.moveTo(px + radius, py - radius); ctx.lineTo(px - radius, py + radius);
-            ctx.stroke();
-          }
-        }
-
-        // Calibration overlay dots & edit mode indicators
-        if (calibrationMode) {
-          ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
-          ctx.strokeStyle = '#1d4ed8';
-          ctx.lineWidth = 2;
-          ctx.beginPath();
-          ctx.arc(px, py, radius, 0, Math.PI * 2);
-          ctx.fill(); ctx.stroke();
-
-          ctx.fillStyle = '#ffffff';
-          ctx.font = `${Math.max(10, canvas.width / 110)}px sans-serif`;
-          ctx.fillText(p.label, px + radius + 2, py + 3);
-        }
-      });
-    }
-
-    canvas.addEventListener('click', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / rect.width;
-      const clickY = (e.clientY - rect.top) / rect.height;
-
-      // Find hit point
-      const hitIdx = points.findIndex(p => Math.hypot(p.x - clickX, p.y - clickY) < 0.02);
-
-      if (calibrationMode) {
-        if (hitIdx >= 0) {
-          const pt = points[hitIdx];
-          const action = prompt(`Target "${pt.label}":\nType "1" to EDIT LABEL\nType "2" to DELETE point\nType "3" to CANCEL`, "1");
-          if (action === "1") {
-            const newLabel = prompt("Enter new label:", pt.label);
-            if (newLabel) pt.label = newLabel.trim();
-          } else if (action === "2") {
-            points.splice(hitIdx, 1);
-          }
-        } else {
-          const label = prompt("Enter label for new target:");
-          if (label) {
-            points.push({ label: label.trim(), x: Number(clickX.toFixed(4)), y: Number(clickY.toFixed(4)), marked: false });
-          }
-        }
-      } else {
-        if (hitIdx >= 0) {
-          const pt = points[hitIdx];
-          pt.marked = !pt.marked;
-          markHistory.push(pt);
-          logAction(`${pt.marked ? 'Marked' : 'Unmarked'} ${pt.label}`);
-        }
-      }
-      redraw();
-    });
-
-    function rollDice() {
-      const isPassive = document.getElementById('chk-passive').checked;
-      const white = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
-      const black = Math.floor(Math.random() * 6) + 1;
-
-      white.forEach((v, i) => document.getElementById(`d${i}`).textContent = v);
-      document.getElementById('d4').textContent = black;
-
-      availableSums.clear();
-      for (let i = 0; i < 4; i++) {
-        for (let j = i + 1; j < 4; j++) availableSums.add(white[i] + white[j]);
-      }
-      if (!isPassive) white.forEach(w => availableSums.add(w + black));
-
-      const arr = Array.from(availableSums).sort((a,b) => a - b);
-      document.getElementById('pairs-output').innerHTML = `<strong>Valid Pair Totals:</strong> ${arr.join(', ')}`;
-      redraw();
-    }
-
-    function undoMark() {
-      if (markHistory.length > 0) {
-        const last = markHistory.pop();
-        last.marked = !last.marked;
-        logAction(`Undid mark on ${last.label}`);
-        redraw();
-      }
-    }
-
-    function logAction(msg) {
-      const log = document.getElementById('action-log');
-      log.innerHTML = `<div>• ${msg}</div>` + log.innerHTML;
-    }
-
-    function toggleCalibration() {
-      calibrationMode = !calibrationMode;
-      document.getElementById('btn-mode').classList.toggle('active', calibrationMode);
-      document.getElementById('calib-banner').style.display = calibrationMode ? 'flex' : 'none';
-      redraw();
-    }
-
-    function clearMarks() {
-      if (confirm("Reset all marked spaces?")) {
-        points.forEach(p => p.marked = false);
-        markHistory = [];
-        logAction("Game board reset.");
-        redraw();
-      }
-    }
-
-    function exportPoints() {
-      const exportable = points.map(p => ({ label: p.label, x: p.x, y: p.y }));
-      navigator.clipboard.writeText(JSON.stringify(exportable, null, 2));
-      alert("Updated JSON dataset copied to clipboard!");
-    }
-
-    window.addEventListener('resize', initCanvas);
-  </script>
-</body>
-</html>
+    // Updated dataset from user
