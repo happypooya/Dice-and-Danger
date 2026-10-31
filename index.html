@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dungeons, Dice & Danger - Annoyed Animals</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #121214;
+      color: #e4e4e7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 15px;
+    }
+    header {
+      width: 100%;
+      max-width: 1200px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1f1f23;
+      padding: 12px 20px;
+      border-radius: 8px;
+      margin-bottom: 12px;
+    }
+    .main-layout {
+      display: flex;
+      gap: 20px;
+      max-width: 1300px;
+      width: 100%;
+    }
+    #game-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    #board-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+    #overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: crosshair;
+    }
+    .panel {
+      width: 320px;
+      background: #1f1f23;
+      padding: 16px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .dice-group {
+      display: flex;
+      gap: 8px;
+      margin: 10px 0;
+    }
+    .die {
+      width: 44px;
+      height: 44px;
+      background: #fff;
+      color: #000;
+      font-weight: bold;
+      font-size: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+      border: 2px solid #ccc;
+    }
+    .die.black {
+      background: #000;
+      color: #fff;
+      border-color: #444;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button.active { background: #16a34a; }
+    button.danger { background: #dc2626; }
+    .pairs-list {
+      background: #27272a;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .calib-banner {
+      width: 100%;
+      max-width: 1200px;
+      background: #b91c1c;
+      color: white;
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h2>Dungeons, Dice & Danger (Annoyed Animals)</h2>
+    <div>
+      <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
+      <button onclick="clearMarks()" class="danger">Reset Game</button>
+    </div>
+  </header>
+
+  <div id="calib-banner" class="calib-banner" style="display: none;">
+    <span><strong>CALIBRATION MODE:</strong> Click anywhere on the sheet to place interactive target points. Click a point to remove it.</span>
+    <button onclick="exportPoints()" style="background:#fff; color:#000;">Copy Points JSON</button>
+  </div>
+
+  <div class="main-layout">
+    <div id="game-container">
+      <img id="board-img" src="https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/Scan_20261031_124717.jpg" alt="Board" onload="initCanvas()">
+      <canvas id="overlay-canvas"></canvas>
+    </div>
+
+    <div class="panel">
+      <h3>Dice Roller</h3>
+      <div>
+        <label><input type="checkbox" id="chk-passive"> Passive Player Turn</label>
+      </div>
+      <button onclick="rollDice()">🎲 Roll 5 Dice</button>
+
+      <div class="dice-group" id="dice-container">
+        <div class="die">-</div>
+        <div class="die">-</div>
+        <div class="die">-</div>
+        <div class="die">-</div>
+        <div class="die black">-</div>
+      </div>
+
+      <h4>Possible Pair Totals</h4>
+      <div class="pairs-list" id="pairs-output">Roll the dice to see available pair totals.</div>
+
+      <hr style="border-color: #3f3f46;">
+
+      <h3>Player Score & Status</h3>
+      <p>Click targets on the board sheet to mark your path, monster damage, or life tracker[cite: 3, 5, 6].</p>
+    </div>
+  </div>
+
+  <script>
+    const img = document.getElementById('board-img');
+    const canvas = document.getElementById('overlay-canvas');
+    const ctx = canvas.getContext('2d');
+
+    let calibrationMode = false;
+    let marks = [];
+    let targets = [];
+
+    function initCanvas() {
+      canvas.width = img.naturalWidth || img.clientWidth;
+      canvas.height = img.naturalHeight || img.clientHeight;
+      redraw();
+    }
+
+    function redraw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Draw gameplay X marks
+      ctx.strokeStyle = '#dc2626';
+      ctx.lineWidth = Math.max(3, canvas.width / 250);
+      marks.forEach(m => {
+        const r = canvas.width / 70;
+        ctx.beginPath();
+        ctx.moveTo(m.x - r, m.y - r); ctx.lineTo(m.x + r, m.y + r);
+        ctx.moveTo(m.x + r, m.y - r); ctx.lineTo(m.x - r, m.y + r);
+        ctx.stroke();
+      });
+
+      // Draw calibration points
+      if (calibrationMode) {
+        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
+        ctx.strokeStyle = '#1d4ed8';
+        ctx.lineWidth = 2;
+        targets.forEach(p => {
+          ctx.beginPath();
+          ctx.arc(p.x, p.y, canvas.width / 80, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        });
+      }
+    }
+
+    canvas.addEventListener('click', (e) => {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width / rect.width;
+      const scaleY = canvas.height / rect.height;
+      const x = (e.clientX - rect.left) * scaleX;
+      const y = (e.clientY - rect.top) * scaleY;
+
+      if (calibrationMode) {
+        const idx = targets.findIndex(p => Math.hypot(p.x - x, p.y - y) < (canvas.width / 50));
+        if (idx >= 0) targets.splice(idx, 1);
+        else targets.push({ x, y });
+      } else {
+        const idx = marks.findIndex(m => Math.hypot(m.x - x, m.y - y) < (canvas.width / 50));
+        if (idx >= 0) marks.splice(idx, 1);
+        else marks.push({ x, y });
+      }
+      redraw();
+    });
+
+    function rollDice() {
+      const isPassive = document.getElementById('chk-passive').checked;
+      const white = [1,2,3,4].map(() => Math.floor(Math.random() * 6) + 1);
+      const black = Math.floor(Math.random() * 6) + 1;
+
+      const diceDivs = document.querySelectorAll('.die');
+      white.forEach((val, i) => diceDivs[i].textContent = val);
+      diceDivs[4].textContent = black;
+
+      // Compute unique pair totals
+      const totals = new Set();
+      for (let i = 0; i < white.length; i++) {
+        for (let j = i + 1; j < white.length; j++) {
+          totals.add(white[i] + white[j]);
+        }
+      }
+      if (!isPassive) {
+        white.forEach(w => totals.add(w + black));
+      }
+
+      const output = Array.from(totals).sort((a,b) => a - b).join(', ');
+      document.getElementById('pairs-output').innerHTML = 
+        `<strong>Available Totals:</strong><br>${output}<br><br>` +
+        `<em>Rule: Form 2 pairs each turn and mark corresponding spaces or deal damage[cite: 4, 5, 6].</em>`;
+    }
+
+    function toggleCalibration() {
+      calibrationMode = !calibrationMode;
+      document.getElementById('btn-mode').classList.toggle('active', calibrationMode);
+      document.getElementById('calib-banner').style.display = calibrationMode ? 'flex' : 'none';
+      redraw();
+    }
+
+    function clearMarks() {
+      if (confirm("Clear all marks on the board?")) {
+        marks = [];
+        redraw();
+      }
+    }
+
+    function exportPoints() {
+      navigator.clipboard.writeText(JSON.stringify(targets));
+      alert("Calibration target coordinates copied to clipboard!");
+    }
+
+    window.addEventListener('resize', initCanvas);
+  </script>
+</body>
+</html>
