@@ -141,7 +141,10 @@
   </header>
 
   <div id="calib-banner" class="calib-banner" style="display: none;">
-    <span><strong>CALIBRATION EDIT MODE:</strong> Click an empty spot to add a target. Click an existing dot to <strong>Edit, Move, or Delete</strong> it.</span>
+    <span>
+      <strong>CALIBRATION EDIT MODE:</strong> 
+      <button id="btn-lock-edit" onclick="toggleEditLock()" style="background:#2563eb; color:#fff; margin-left:10px; padding:3px 8px; font-size:12px;">✏️ Edit/Delete: ENABLED</button>
+    </span>
     <button onclick="exportPoints()" style="background:#fff; color:#000;">📋 Copy JSON Data</button>
   </div>
 
@@ -381,15 +384,25 @@
       });
     }
 
+    let allowEditingPoints = true;
+
+    function toggleEditLock() {
+      allowEditingPoints = !allowEditingPoints;
+      const btn = document.getElementById('btn-lock-edit');
+      btn.textContent = allowEditingPoints ? '✏️ Edit/Delete: ENABLED' : '➕ Add Only Mode (Editing Locked)';
+      btn.style.background = allowEditingPoints ? '#2563eb' : '#16a34a';
+    }
+
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
       const clickX = (e.clientX - rect.left) / rect.width;
       const clickY = (e.clientY - rect.top) / rect.height;
 
-      const hitIdx = points.findIndex(p => Math.hypot(p.x - clickX, p.y - clickY) < 0.03);
+      const threshold = calibrationMode ? 0.008 : 0.03;
+      const hitIdx = points.findIndex(p => Math.hypot(p.x - clickX, p.y - clickY) < threshold);
 
       if (calibrationMode) {
-        if (hitIdx >= 0) {
+        if (hitIdx >= 0 && allowEditingPoints) {
           const pt = points[hitIdx];
           const action = prompt(`Target "${pt.label}":\nType "1" to EDIT LABEL\nType "2" to DELETE point\nType "3" to CANCEL`, "1");
           if (action === "1") {
@@ -398,7 +411,7 @@
           } else if (action === "2") {
             points.splice(hitIdx, 1);
           }
-        } else {
+        } else if (hitIdx < 0 || !allowEditingPoints) {
           const label = prompt("Enter label for new target:");
           if (label) {
             points.push({ label: label.trim(), x: Number(clickX.toFixed(4)), y: Number(clickY.toFixed(4)), marked: false });
