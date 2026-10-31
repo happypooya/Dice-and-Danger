@@ -46,6 +46,7 @@
       border-radius: 8px;
       overflow: hidden;
       box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      align-self: flex-start;
     }
     #board-img {
       display: block;
@@ -104,27 +105,22 @@
     button:hover { background: #1d4ed8; }
     button.active { background: #16a34a; }
     button.danger { background: #dc2626; }
-    .pair-row {
+    .pairs-box {
       background: #27272a;
-      border: 2px solid transparent;
-      padding: 10px;
+      padding: 12px;
       border-radius: 6px;
-      cursor: pointer;
-      margin-bottom: 6px;
-      font-weight: 600;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
+      font-size: 14px;
+      line-height: 1.5;
+      color: #eab308;
+      min-height: 50px;
     }
-    .pair-row:hover { background: #3f3f46; }
-    .pair-row.selected { border-color: #eab308; background: #3f3f46; }
     .history-log {
       background: #27272a;
       padding: 10px;
       border-radius: 6px;
       font-size: 13px;
       line-height: 1.4;
-      max-height: 120px;
+      max-height: 150px;
       overflow-y: auto;
     }
     .calib-banner {
@@ -145,7 +141,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.1.2</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.1.3</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -179,8 +175,8 @@
         <div class="die black" id="d4">-</div>
       </div>
 
-      <h4>Select Pair Option Row</h4>
-      <div id="rows-container">Roll dice to see pair row options.</div>
+      <h4>Possible Pair Sums</h4>
+      <div id="pairs-output" class="pairs-box">Roll dice to view available pair numbers.</div>
 
       <hr style="border-color: #3f3f46;">
 
@@ -192,10 +188,7 @@
   <script>
     let calibrationMode = false;
     let markHistory = [];
-
-    let currentDice = [];
-    let pairOptionsRows = [];
-    let selectedRowIndex = -1;
+    let activeSumsList = [];
 
     const points = [
       { "label": "start_2", "x": 0.202, "y": 0.0783 },
@@ -281,17 +274,13 @@
     const canvas = document.getElementById('overlay-canvas');
     const ctx = canvas.getContext('2d');
 
-    function initCanvas() {
-      const rect = img.getBoundingClientRect();
-      canvas.width = rect.width || img.clientWidth || 800;
-      canvas.height = rect.height || img.clientHeight || 800;
-      redraw();
-    }
-
-    if (img.complete) {
-      initCanvas();
-    } else {
-      img.onload = initCanvas;
+    function syncCanvasSize() {
+      const w = img.clientWidth;
+      const h = img.clientHeight;
+      if (w > 0 && h > 0) {
+        canvas.width = w;
+        canvas.height = h;
+      }
     }
 
     function isMonsterHpLabel(label) {
@@ -305,33 +294,26 @@
     }
 
     function redraw() {
-      const rect = img.getBoundingClientRect();
-      if (canvas.width !== rect.width || canvas.height !== rect.height) {
-        canvas.width = rect.width;
-        canvas.height = rect.height;
-      }
-
+      syncCanvasSize();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-      const activePairs = selectedRowIndex >= 0 ? pairOptionsRows[selectedRowIndex].pairs : [];
 
       points.forEach((p) => {
         const px = p.x * canvas.width;
         const py = p.y * canvas.height;
-        const radius = canvas.width * 0.015;
+        const radius = Math.max(8, canvas.width * 0.012);
 
         const isMonster = isMonsterHpLabel(p.label);
 
         let isHighlighted = false;
-        if (selectedRowIndex >= 0) {
+        if (activeSumsList.length > 0) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.includes('double');
 
-          isHighlighted = activePairs.some(pair => {
-            if (numVal && pair.sum === numVal) {
-              return isDoubleReq ? pair.isDouble : true;
+          isHighlighted = activeSumsList.some(item => {
+            if (numVal && item.sum === numVal) {
+              return isDoubleReq ? item.isDouble : true;
             }
-            if (isDoubleReq && !numVal) return pair.isDouble;
+            if (isDoubleReq && !numVal) return item.isDouble;
             return false;
           });
         }
@@ -350,21 +332,12 @@
         }
 
         if (isHighlighted && !p.marked) {
-          if (isMonster) {
-            ctx.fillStyle = 'rgba(234, 179, 8, 0.6)';
-            ctx.strokeStyle = '#eab308';
-            ctx.lineWidth = 2;
-            ctx.beginPath();
-            ctx.arc(px, py, radius * 0.5, 0, Math.PI * 2);
-            ctx.fill(); ctx.stroke();
-          } else {
-            ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
-            ctx.strokeStyle = '#eab308';
-            ctx.lineWidth = 3;
-            ctx.beginPath();
-            ctx.arc(px, py, radius, 0, Math.PI * 2);
-            ctx.fill(); ctx.stroke();
-          }
+          ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
+          ctx.strokeStyle = '#eab308';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(px, py, isMonster ? radius * 0.6 : radius, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
         }
 
         if (p.marked) {
@@ -401,7 +374,7 @@
       const clickX = (e.clientX - rect.left) / rect.width;
       const clickY = (e.clientY - rect.top) / rect.height;
 
-      const hitIdx = points.findIndex(p => Math.hypot(p.x - clickX, p.y - clickY) < 0.02);
+      const hitIdx = points.findIndex(p => Math.hypot(p.x - clickX, p.y - clickY) < 0.03);
 
       if (calibrationMode) {
         if (hitIdx >= 0) {
@@ -435,82 +408,27 @@
       const white = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
       const black = Math.floor(Math.random() * 6) + 1;
 
-      currentDice = isPassive ? white : [...white, black];
-
       white.forEach((v, i) => document.getElementById(`d${i}`).textContent = v);
       document.getElementById('d4').textContent = isPassive ? '-' : black;
 
-      pairOptionsRows = [];
-      if (isPassive) {
-        pairOptionsRows.push({
-          pairs: [
-            { sum: white[0] + white[1], isDouble: white[0] === white[1] },
-            { sum: white[2] + white[3], isDouble: white[2] === white[3] }
-          ]
-        });
-        pairOptionsRows.push({
-          pairs: [
-            { sum: white[0] + white[2], isDouble: white[0] === white[2] },
-            { sum: white[1] + white[3], isDouble: white[1] === white[3] }
-          ]
-        });
-        pairOptionsRows.push({
-          pairs: [
-            { sum: white[0] + white[3], isDouble: white[0] === white[3] },
-            { sum: white[1] + white[2], isDouble: white[1] === white[2] }
-          ]
-        });
-      } else {
-        for (let i = 0; i < 5; i++) {
-          for (let j = i + 1; j < 5; j++) {
-            const p1Sum = currentDice[i] + currentDice[j];
-            const p1Dbl = currentDice[i] === currentDice[j];
+      const currentDice = isPassive ? white : [...white, black];
+      activeSumsList = [];
 
-            const remIdx = [0,1,2,3,4].filter(idx => idx !== i && idx !== j);
-            for (let k = 0; k < remIdx.length; k++) {
-              for (let l = k + 1; l < remIdx.length; l++) {
-                const idxA = remIdx[k];
-                const idxB = remIdx[l];
-                const p2Sum = currentDice[idxA] + currentDice[idxB];
-                const p2Dbl = currentDice[idxA] === currentDice[idxB];
-
-                pairOptionsRows.push({
-                  pairs: [
-                    { sum: p1Sum, isDouble: p1Dbl },
-                    { sum: p2Sum, isDouble: p2Dbl }
-                  ]
-                });
-              }
-            }
-          }
+      for (let i = 0; i < currentDice.length; i++) {
+        for (let j = i + 1; j < currentDice.length; j++) {
+          activeSumsList.push({
+            sum: currentDice[i] + currentDice[j],
+            isDouble: currentDice[i] === currentDice[j]
+          });
         }
       }
 
-      selectedRowIndex = -1;
-      renderRowOptions();
-      redraw();
-    }
+      // Display simple text list of valid numbers
+      const formatted = activeSumsList
+        .map(s => `${s.sum}${s.isDouble ? ' (Double!)' : ''}`)
+        .join(', ');
 
-    function renderRowOptions() {
-      const container = document.getElementById('rows-container');
-      container.innerHTML = '';
-
-      pairOptionsRows.forEach((row, idx) => {
-        const div = document.createElement('div');
-        div.className = `pair-row ${idx === selectedRowIndex ? 'selected' : ''}`;
-        
-        const text1 = `${row.pairs[0].sum}${row.pairs[0].isDouble ? ' (Double!)' : ''}`;
-        const text2 = `${row.pairs[1].sum}${row.pairs[1].isDouble ? ' (Double!)' : ''}`;
-        
-        div.innerHTML = `<span>Row ${idx + 1}:</span> <span>${text1} & ${text2}</span>`;
-        div.onclick = () => selectRow(idx);
-        container.appendChild(div);
-      });
-    }
-
-    function selectRow(idx) {
-      selectedRowIndex = idx;
-      renderRowOptions();
+      document.getElementById('pairs-output').innerHTML = `<strong>Valid Numbers:</strong><br>${formatted}`;
       redraw();
     }
 
@@ -550,7 +468,8 @@
       alert("Updated JSON dataset copied to clipboard!");
     }
 
-    window.addEventListener('resize', initCanvas);
+    img.onload = () => { syncCanvasSize(); redraw(); };
+    window.addEventListener('resize', () => { syncCanvasSize(); redraw(); });
   </script>
 </body>
 </html>
