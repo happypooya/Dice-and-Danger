@@ -55,7 +55,7 @@
       cursor: pointer;
     }
     .panel {
-      width: 320px;
+      width: 340px;
       background: #1f1f23;
       padding: 16px;
       border-radius: 8px;
@@ -69,8 +69,8 @@
       margin: 8px 0;
     }
     .die {
-      width: 42px;
-      height: 42px;
+      width: 40px;
+      height: 40px;
       background: #fff;
       color: #000;
       font-weight: bold;
@@ -97,13 +97,27 @@
     button:hover { background: #1d4ed8; }
     button.active { background: #16a34a; }
     button.danger { background: #dc2626; }
+    .pair-row {
+      background: #27272a;
+      border: 2px solid transparent;
+      padding: 10px;
+      border-radius: 6px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      font-weight: 600;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .pair-row:hover { background: #3f3f46; }
+    .pair-row.selected { border-color: #eab308; background: #3f3f46; }
     .history-log {
       background: #27272a;
       padding: 10px;
       border-radius: 6px;
       font-size: 13px;
       line-height: 1.4;
-      max-height: 150px;
+      max-height: 120px;
       overflow-y: auto;
     }
     .calib-banner {
@@ -146,7 +160,7 @@
     <div class="panel">
       <h3>Dice Controls</h3>
       <div>
-        <label><input type="checkbox" id="chk-passive"> Passive Player Turn</label>
+        <label><input type="checkbox" id="chk-passive" onchange="rollDice()"> Passive Player Turn</label>
       </div>
       <button onclick="rollDice()">🎲 Roll 5 Dice</button>
 
@@ -158,8 +172,8 @@
         <div class="die black" id="d4">-</div>
       </div>
 
-      <h4>Pair Totals & Highlights</h4>
-      <div id="pairs-output" style="font-size:13px; color:#a1a1aa;">Roll dice to see pair sums and highlight mapped spaces.</div>
+      <h4>Select Pair Option Row</h4>
+      <div id="rows-container">Roll dice to see pair row options.</div>
 
       <hr style="border-color: #3f3f46;">
 
@@ -170,8 +184,18 @@
 
   <script>
     let calibrationMode = false;
-    let availablePairs = [];
     let markHistory = [];
+
+    let currentDice = [];
+    let pairOptionsRows = [];
+    let selectedRowIndex = -1;
+
+    // Monster hit tracks configuration
+    const monsters = {
+      purple_pup: { prefix: 'purple_pup_', hpCount: 4 },
+      green_growler: { prefix: 'Green_growler_', hpCount: 4 },
+      punk_hare: { prefix: 'punk_hare_', hpCount: 5 }
+    };
 
     const points = [
       { "label": "start_2", "x": 0.202, "y": 0.0783 },
@@ -263,40 +287,83 @@
       redraw();
     }
 
+    function isMonsterHpLabel(label) {
+      const l = label.toLowerCase();
+      return l.includes('pup') || l.includes('growler') || l.includes('hare');
+    }
+
+    function getFirstUnmarkedMonsterBox(monsterPrefix) {
+      const hpPoints = points.filter(p => p.label.toLowerCase().includes(monsterPrefix.toLowerCase()));
+      return hpPoints.find(p => !p.marked);
+    }
+
     function redraw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const activePairs = selectedRowIndex >= 0 ? pairOptionsRows[selectedRowIndex].pairs : [];
 
       points.forEach((p) => {
         const px = p.x * canvas.width;
         const py = p.y * canvas.height;
         const radius = canvas.width * 0.012;
 
-        const numVal = parseInt(p.label.replace(/\D/g, ''));
-        const isDoubleRequired = p.label.includes('double');
-        
-        const isHighlighted = availablePairs.some(pair => {
-          if (numVal && pair.sum === numVal) {
-            return isDoubleRequired ? pair.isDouble : true;
-          }
-          if (isDoubleRequired && !numVal) return pair.isDouble;
-          return false;
-        });
+        const isMonster = isMonsterHpLabel(p.label);
 
-        if (isHighlighted && !p.marked) {
-          ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
-          ctx.strokeStyle = '#eab308';
-          ctx.lineWidth = 3;
-          ctx.beginPath();
-          ctx.arc(px, py, radius * 1.4, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
+        // Check if space matches selected dice row
+        let isHighlighted = false;
+        if (selectedRowIndex >= 0) {
+          const numVal = parseInt(p.label.replace(/\D/g, ''));
+          const isDoubleReq = p.label.includes('double');
+
+          isHighlighted = activePairs.some(pair => {
+            if (numVal && pair.sum === numVal) {
+              return isDoubleReq ? pair.isDouble : true;
+            }
+            if (isDoubleReq && !numVal) return pair.isDouble;
+            return false;
+          });
         }
 
-        if (p.marked) {
+        // For monster HP, only highlight the FIRST open uncrossed box
+        if (isMonster && isHighlighted && !p.marked) {
+          let prefix = '';
           const l = p.label.toLowerCase();
-          if (l.includes('pup') || l.includes('growler') || l.includes('hare')) {
+          if (l.includes('pup')) prefix = 'purple_pup';
+          else if (l.includes('growler')) prefix = 'green_growler';
+          else if (l.includes('hare')) prefix = 'punk_hare';
+
+          const firstOpen = getFirstUnmarkedMonsterBox(prefix);
+          if (p !== firstOpen) {
+            isHighlighted = false;
+          }
+        }
+
+        // Draw Highlights
+        if (isHighlighted && !p.marked) {
+          if (isMonster) {
+            // Tight mini highlight circle for monster HP
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.6)';
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.arc(px, py, radius * 0.6, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+          } else {
+            // Standard board highlight
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
+            ctx.strokeStyle = '#eab308';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.arc(px, py, radius * 1.4, 0, Math.PI * 2);
+            ctx.fill(); ctx.stroke();
+          }
+        }
+
+        // Draw Marked States
+        if (p.marked) {
+          if (isMonster) {
             ctx.fillStyle = '#dc2626';
-            ctx.fillRect(px - radius/1.5, py - radius/1.5, radius * 1.3, radius * 1.3);
+            ctx.fillRect(px - radius/2, py - radius/2, radius, radius);
           } else {
             ctx.strokeStyle = '#dc2626';
             ctx.lineWidth = Math.max(2, canvas.width / 300);
@@ -307,14 +374,14 @@
           }
         }
 
+        // Calibration overlay
         if (calibrationMode) {
           ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
           ctx.strokeStyle = '#1d4ed8';
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(px, py, radius, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.stroke();
+          ctx.fill(); ctx.stroke();
 
           ctx.fillStyle = '#ffffff';
           ctx.font = `${Math.max(10, canvas.width / 110)}px sans-serif`;
@@ -362,31 +429,85 @@
       const white = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
       const black = Math.floor(Math.random() * 6) + 1;
 
+      currentDice = isPassive ? white : [...white, black];
+
       white.forEach((v, i) => document.getElementById(`d${i}`).textContent = v);
-      document.getElementById('d4').textContent = black;
+      document.getElementById('d4').textContent = isPassive ? '-' : black;
 
-      availablePairs = [];
+      // Calculate Pair Combinations Rows
+      pairOptionsRows = [];
+      if (isPassive) {
+        // 4 white dice: 2 fixed pairs (3 pair row combinations)
+        pairOptionsRows.push({
+          pairs: [
+            { sum: white[0] + white[1], isDouble: white[0] === white[1] },
+            { sum: white[2] + white[3], isDouble: white[2] === white[3] }
+          ]
+        });
+        pairOptionsRows.push({
+          pairs: [
+            { sum: white[0] + white[2], isDouble: white[0] === white[2] },
+            { sum: white[1] + white[3], isDouble: white[1] === white[3] }
+          ]
+        });
+        pairOptionsRows.push({
+          pairs: [
+            { sum: white[0] + white[3], isDouble: white[0] === white[3] },
+            { sum: white[1] + white[2], isDouble: white[1] === white[2] }
+          ]
+        });
+      } else {
+        // 5 dice: Generate valid 2-pair rows
+        for (let i = 0; i < 5; i++) {
+          for (let j = i + 1; j < 5; j++) {
+            const p1Sum = currentDice[i] + currentDice[j];
+            const p1Dbl = currentDice[i] === currentDice[j];
 
-      for (let i = 0; i < 4; i++) {
-        for (let j = i + 1; j < 4; j++) {
-          availablePairs.push({
-            sum: white[i] + white[j],
-            isDouble: white[i] === white[j]
-          });
+            const remIdx = [0,1,2,3,4].filter(idx => idx !== i && idx !== j);
+            for (let k = 0; k < remIdx.length; k++) {
+              for (let l = k + 1; l < remIdx.length; l++) {
+                const idxA = remIdx[k];
+                const idxB = remIdx[l];
+                const p2Sum = currentDice[idxA] + currentDice[idxB];
+                const p2Dbl = currentDice[idxA] === currentDice[idxB];
+
+                pairOptionsRows.push({
+                  pairs: [
+                    { sum: p1Sum, isDouble: p1Dbl },
+                    { sum: p2Sum, isDouble: p2Dbl }
+                  ]
+                });
+              }
+            }
+          }
         }
       }
 
-      if (!isPassive) {
-        white.forEach(w => {
-          availablePairs.push({
-            sum: w + black,
-            isDouble: w === black
-          });
-        });
-      }
+      selectedRowIndex = -1;
+      renderRowOptions();
+      redraw();
+    }
 
-      const summaryStr = availablePairs.map(p => `${p.sum}${p.isDouble ? ' (Double!)' : ''}`).join(', ');
-      document.getElementById('pairs-output').innerHTML = `<strong>Valid Pairs:</strong> ${summaryStr}`;
+    function renderRowOptions() {
+      const container = document.getElementById('rows-container');
+      container.innerHTML = '';
+
+      pairOptionsRows.forEach((row, idx) => {
+        const div = document.createElement('div');
+        div.className = `pair-row ${idx === selectedRowIndex ? 'selected' : ''}`;
+        
+        const text1 = `${row.pairs[0].sum}${row.pairs[0].isDouble ? ' (Double!)' : ''}`;
+        const text2 = `${row.pairs[1].sum}${row.pairs[1].isDouble ? ' (Double!)' : ''}`;
+        
+        div.innerHTML = `<span>Row ${idx + 1}:</span> <span>${text1} & ${text2}</span>`;
+        div.onclick = () => selectRow(idx);
+        container.appendChild(div);
+      });
+    }
+
+    function selectRow(idx) {
+      selectedRowIndex = idx;
+      renderRowOptions();
       redraw();
     }
 
