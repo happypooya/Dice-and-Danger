@@ -8,28 +8,28 @@
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
       font-family: system-ui, -apple-system, sans-serif;
-      background: #121214;
-      color: #e4e4e7;
+      background: #111113;
+      color: #f4f4f5;
       display: flex;
       flex-direction: column;
       align-items: center;
-      padding: 15px;
+      padding: 12px;
     }
     header {
       width: 100%;
-      max-width: 1200px;
+      max-width: 1280px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: #1f1f23;
-      padding: 12px 20px;
+      background: #18181b;
+      padding: 10px 18px;
       border-radius: 8px;
-      margin-bottom: 12px;
+      margin-bottom: 10px;
     }
     .main-layout {
       display: flex;
-      gap: 20px;
-      max-width: 1300px;
+      gap: 16px;
+      max-width: 1280px;
       width: 100%;
     }
     #game-container {
@@ -38,7 +38,7 @@
       background: #000;
       border-radius: 8px;
       overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
     }
     #board-img {
       display: block;
@@ -52,45 +52,44 @@
       left: 0;
       width: 100%;
       height: 100%;
-      cursor: crosshair;
+      cursor: pointer;
     }
     .panel {
       width: 320px;
-      background: #1f1f23;
+      background: #18181b;
       padding: 16px;
       border-radius: 8px;
       display: flex;
       flex-direction: column;
-      gap: 16px;
+      gap: 14px;
     }
     .dice-group {
       display: flex;
-      gap: 8px;
-      margin: 10px 0;
+      gap: 6px;
+      margin: 8px 0;
     }
     .die {
-      width: 44px;
-      height: 44px;
+      width: 40px;
+      height: 40px;
       background: #fff;
       color: #000;
       font-weight: bold;
-      font-size: 20px;
+      font-size: 18px;
       display: flex;
       align-items: center;
       justify-content: center;
       border-radius: 6px;
-      border: 2px solid #ccc;
     }
     .die.black {
       background: #000;
       color: #fff;
-      border-color: #444;
+      border: 1px solid #555;
     }
     button {
       background: #2563eb;
       color: white;
       border: none;
-      padding: 10px 14px;
+      padding: 8px 12px;
       border-radius: 6px;
       font-weight: 600;
       cursor: pointer;
@@ -98,42 +97,38 @@
     button:hover { background: #1d4ed8; }
     button.active { background: #16a34a; }
     button.danger { background: #dc2626; }
-    .pairs-list {
+    .score-card {
       background: #27272a;
-      padding: 10px;
+      padding: 12px;
       border-radius: 6px;
-      font-size: 13px;
-      line-height: 1.5;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 14px;
     }
-    .calib-banner {
-      width: 100%;
-      max-width: 1200px;
-      background: #b91c1c;
-      color: white;
-      padding: 10px 16px;
-      border-radius: 6px;
-      margin-bottom: 12px;
+    .score-row {
       display: flex;
       justify-content: space-between;
-      align-items: center;
-      font-size: 14px;
+    }
+    .total-score {
+      font-size: 18px;
+      font-weight: bold;
+      color: #22c55e;
+      border-top: 1px solid #3f3f46;
+      padding-top: 6px;
+      margin-top: 4px;
     }
   </style>
 </head>
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger (Annoyed Animals)</h2>
+    <h2>Dungeons, Dice & Danger: Annoyed Animals</h2>
     <div>
-      <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
-      <button onclick="clearMarks()" class="danger">Reset Game</button>
+      <button id="btn-mode" onclick="toggleCalibration()">🔧 Calibration Mode</button>
+      <button onclick="resetBoard()" class="danger">Reset Game</button>
     </div>
   </header>
-
-  <div id="calib-banner" class="calib-banner" style="display: none;">
-    <span><strong>CALIBRATION MODE:</strong> Click anywhere on the sheet to place interactive target points. Click a point to remove it.</span>
-    <button onclick="exportPoints()" style="background:#fff; color:#000;">Copy Points JSON</button>
-  </div>
 
   <div class="main-layout">
     <div id="game-container">
@@ -144,25 +139,30 @@
     <div class="panel">
       <h3>Dice Roller</h3>
       <div>
-        <label><input type="checkbox" id="chk-passive"> Passive Player Turn</label>
+        <label><input type="checkbox" id="chk-passive"> Passive Turn (Needs Black Die symbol)</label>
       </div>
-      <button onclick="rollDice()">🎲 Roll 5 Dice</button>
+      <button onclick="rollDice()">🎲 Roll Dice</button>
 
-      <div class="dice-group" id="dice-container">
-        <div class="die">-</div>
-        <div class="die">-</div>
-        <div class="die">-</div>
-        <div class="die">-</div>
-        <div class="die black">-</div>
+      <div class="dice-group">
+        <div class="die" id="d0">-</div>
+        <div class="die" id="d1">-</div>
+        <div class="die" id="d2">-</div>
+        <div class="die" id="d3">-</div>
+        <div class="die black" id="d4">-</div>
       </div>
 
-      <h4>Possible Pair Totals</h4>
-      <div class="pairs-list" id="pairs-output">Roll the dice to see available pair totals.</div>
+      <div style="font-size:13px; color:#a1a1aa;" id="pairs-output">Roll to see valid pair sums.</div>
 
-      <hr style="border-color: #3f3f46;">
+      <hr style="border-color: #27272a;">
 
-      <h3>Player Score & Status</h3>
-      <p>Click targets on the board sheet to mark your path, monster damage, or life tracker[cite: 3, 5, 6].</p>
+      <h3>Automatic Score Sheet</h3>
+      <div class="score-card">
+        <div class="score-row"><span>Monster VP:</span><span id="score-monsters">0</span></div>
+        <div class="score-row"><span>Gold Rewards (2 VP ea):</span><span id="score-gold">0</span></div>
+        <div class="score-row"><span>Gem Rewards (3 VP ea):</span><span id="score-gems">0</span></div>
+        <div class="score-row"><span>HP Penalty:</span><span id="score-hp">-0</span></div>
+        <div class="score-row total-score"><span>TOTAL VP:</span><span id="score-total">0</span></div>
+      </div>
     </div>
   </div>
 
@@ -172,8 +172,21 @@
     const ctx = canvas.getContext('2d');
 
     let calibrationMode = false;
-    let marks = [];
-    let targets = [];
+    let selectedZone = null;
+
+    // Defined grid regions & targets (percentages based on image dimensions)
+    const zones = [
+      // Example target zones mapped to canvas coordinates
+      { id: 'start_2', type: 'start', val: 2, x: 0.19, y: 0.28, marked: false },
+      { id: 'start_9', type: 'start', val: 9, x: 0.19, y: 0.33, marked: false },
+      { id: 'start_6', type: 'start', val: 6, x: 0.19, y: 0.38, marked: false },
+      
+      // Monster: Purple Howler Life Boxes
+      { id: 'p_howler_1', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.26, marked: false },
+      { id: 'p_howler_2', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.29, marked: false },
+      { id: 'p_howler_3', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.32, marked: false },
+      { id: 'p_howler_4', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.35, marked: false }
+    ];
 
     function initCanvas() {
       canvas.width = img.naturalWidth || img.clientWidth;
@@ -184,92 +197,86 @@
     function redraw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // Draw gameplay X marks
-      ctx.strokeStyle = '#dc2626';
-      ctx.lineWidth = Math.max(3, canvas.width / 250);
-      marks.forEach(m => {
-        const r = canvas.width / 70;
-        ctx.beginPath();
-        ctx.moveTo(m.x - r, m.y - r); ctx.lineTo(m.x + r, m.y + r);
-        ctx.moveTo(m.x + r, m.y - r); ctx.lineTo(m.x - r, m.y + r);
-        ctx.stroke();
+      zones.forEach(z => {
+        const px = z.x * canvas.width;
+        const py = z.y * canvas.height;
+        const size = canvas.width * 0.022;
+
+        if (z.marked) {
+          // Draw a precise red X fitted directly inside the box
+          ctx.strokeStyle = '#e11d48';
+          ctx.lineWidth = Math.max(2, canvas.width / 350);
+          ctx.beginPath();
+          ctx.moveTo(px - size/2, py - size/2); ctx.lineTo(px + size/2, py + size/2);
+          ctx.moveTo(px + size/2, py - size/2); ctx.lineTo(px - size/2, py + size/2);
+          ctx.stroke();
+        }
+
+        if (calibrationMode) {
+          ctx.strokeStyle = z === selectedZone ? '#f59e0b' : '#3b82f6';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(px - size/2, py - size/2, size, size);
+        }
       });
 
-      // Draw calibration points
-      if (calibrationMode) {
-        ctx.fillStyle = 'rgba(59, 130, 246, 0.5)';
-        ctx.strokeStyle = '#1d4ed8';
-        ctx.lineWidth = 2;
-        targets.forEach(p => {
-          ctx.beginPath();
-          ctx.arc(p.x, p.y, canvas.width / 80, 0, Math.PI * 2);
-          ctx.fill(); ctx.stroke();
-        });
-      }
+      calculateScore();
     }
 
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
-      const scaleX = canvas.width / rect.width;
-      const scaleY = canvas.height / rect.height;
-      const x = (e.clientX - rect.left) * scaleX;
-      const y = (e.clientY - rect.top) * scaleY;
+      const clickX = (e.clientX - rect.left) / rect.width;
+      const clickY = (e.clientY - rect.top) / rect.height;
 
-      if (calibrationMode) {
-        const idx = targets.findIndex(p => Math.hypot(p.x - x, p.y - y) < (canvas.width / 50));
-        if (idx >= 0) targets.splice(idx, 1);
-        else targets.push({ x, y });
-      } else {
-        const idx = marks.findIndex(m => Math.hypot(m.x - x, m.y - y) < (canvas.width / 50));
-        if (idx >= 0) marks.splice(idx, 1);
-        else marks.push({ x, y });
+      // Find closest zone
+      const hit = zones.find(z => Math.hypot(z.x - clickX, z.y - clickY) < 0.025);
+
+      if (calibrationMode && hit) {
+        selectedZone = hit;
+      } else if (hit) {
+        hit.marked = !hit.marked;
       }
       redraw();
     });
 
     function rollDice() {
       const isPassive = document.getElementById('chk-passive').checked;
-      const white = [1,2,3,4].map(() => Math.floor(Math.random() * 6) + 1);
+      const white = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
       const black = Math.floor(Math.random() * 6) + 1;
 
-      const diceDivs = document.querySelectorAll('.die');
-      white.forEach((val, i) => diceDivs[i].textContent = val);
-      diceDivs[4].textContent = black;
+      white.forEach((v, i) => document.getElementById(`d${i}`).textContent = v);
+      document.getElementById('d4').textContent = black;
 
-      // Compute unique pair totals
-      const totals = new Set();
-      for (let i = 0; i < white.length; i++) {
-        for (let j = i + 1; j < white.length; j++) {
-          totals.add(white[i] + white[j]);
-        }
+      const sums = new Set();
+      for (let i = 0; i < 4; i++) {
+        for (let j = i + 1; j < 4; j++) sums.add(white[i] + white[j]);
       }
-      if (!isPassive) {
-        white.forEach(w => totals.add(w + black));
-      }
+      if (!isPassive) white.forEach(w => sums.add(w + black));
 
-      const output = Array.from(totals).sort((a,b) => a - b).join(', ');
-      document.getElementById('pairs-output').innerHTML = 
-        `<strong>Available Totals:</strong><br>${output}<br><br>` +
-        `<em>Rule: Form 2 pairs each turn and mark corresponding spaces or deal damage[cite: 4, 5, 6].</em>`;
+      const arr = Array.from(sums).sort((a,b) => a - b);
+      document.getElementById('pairs-output').innerHTML = `<strong>Sums:</strong> ${arr.join(', ')}`;
+    }
+
+    function calculateScore() {
+      // Monster tracking logic
+      const howlerBoxes = zones.filter(z => z.monster === 'Purple Howler');
+      const howlerDefeated = howlerBoxes.length > 0 && howlerBoxes.every(z => z.marked);
+      const monsterVP = howlerDefeated ? 12 : 0; // 12 VP for Purple Howler
+
+      document.getElementById('score-monsters').textContent = monsterVP;
+      document.getElementById('score-total').textContent = monsterVP;
     }
 
     function toggleCalibration() {
       calibrationMode = !calibrationMode;
       document.getElementById('btn-mode').classList.toggle('active', calibrationMode);
-      document.getElementById('calib-banner').style.display = calibrationMode ? 'flex' : 'none';
       redraw();
     }
 
-    function clearMarks() {
-      if (confirm("Clear all marks on the board?")) {
-        marks = [];
+    function resetBoard() {
+      if (confirm("Reset game board?")) {
+        zones.forEach(z => z.marked = false);
         redraw();
       }
-    }
-
-    function exportPoints() {
-      navigator.clipboard.writeText(JSON.stringify(targets));
-      alert("Calibration target coordinates copied to clipboard!");
     }
 
     window.addEventListener('resize', initCanvas);
