@@ -3,106 +3,151 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Board Calibrator - Dungeons, Dice & Danger</title>
+  <title>Dungeons, Dice & Danger - Test Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: sans-serif; background: #121214; color: #fff; padding: 15px; text-align: center; }
-    #toolbar { margin-bottom: 12px; display: flex; justify-content: center; gap: 12px; }
-    button { padding: 8px 16px; font-weight: bold; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #121214;
+      color: #e4e4e7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+    }
+    header {
+      width: 100%;
+      max-width: 1280px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1f1f23;
+      padding: 10px 18px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+    }
+    .main-layout {
+      display: flex;
+      gap: 16px;
+      max-width: 1280px;
+      width: 100%;
+    }
+    #game-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+    }
+    #board-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+    #overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+    }
+    .panel {
+      width: 320px;
+      background: #1f1f23;
+      padding: 16px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .dice-group {
+      display: flex;
+      gap: 6px;
+      margin: 8px 0;
+    }
+    .die {
+      width: 42px;
+      height: 42px;
+      background: #fff;
+      color: #000;
+      font-weight: bold;
+      font-size: 18px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 6px;
+    }
+    .die.black {
+      background: #000;
+      color: #fff;
+      border: 1px solid #444;
+    }
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button.active { background: #16a34a; }
     button.danger { background: #dc2626; }
-    #container { position: relative; display: inline-block; max-width: 100%; border: 2px solid #333; }
-    #board { display: block; max-width: 100%; height: auto; user-select: none; }
-    #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
-    #list { margin-top: 15px; max-width: 800px; text-align: left; background: #222; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
+    .history-log {
+      background: #27272a;
+      padding: 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.4;
+      max-height: 150px;
+      overflow-y: auto;
+    }
+    .calib-banner {
+      width: 100%;
+      max-width: 1280px;
+      background: #b91c1c;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
   </style>
 </head>
 <body>
 
-  <h2>Board Coordinate Mapper</h2>
-  <div id="toolbar">
-    <button onclick="copyData()">📋 Copy Coordinate Data</button>
-    <button onclick="undoLast()" class="danger">↩ Undo Last Point</button>
-    <button onclick="clearAll()" class="danger">🗑 Clear All</button>
+  <header>
+    <h2>Dungeons, Dice & Danger (Testing Engine)</h2>
+    <div>
+      <button onclick="undoMark()">↩ Undo Last Mark</button>
+      <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
+      <button onclick="clearMarks()" class="danger">Reset Game</button>
+    </div>
+  </header>
+
+  <div id="calib-banner" class="calib-banner" style="display: none;">
+    <span><strong>CALIBRATION EDIT MODE:</strong> Click an empty spot to add a target. Click an existing dot to <strong>Edit, Move, or Delete</strong> it.</span>
+    <button onclick="exportPoints()" style="background:#fff; color:#000;">📋 Copy JSON Data</button>
   </div>
-  <p>Click any box on the image, then enter its label (e.g., <code>start_2</code>, <code>path_7</code>, <code>howler_hp1</code>).</p>
 
-  <div id="container">
-    <img id="board" src="https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/Scan_20261031_124717.jpg" onload="initCanvas()">
-    <canvas id="canvas"></canvas>
-  </div>
+  <div class="main-layout">
+    <div id="game-container">
+      <img id="board-img" src="https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/Scan_20261031_124717.jpg" alt="Board" onload="initCanvas()">
+      <canvas id="overlay-canvas"></canvas>
+    </div>
 
-  <div id="list" id="output">No points added yet.</div>
+    <div class="panel">
+      <h3>Dice Controls</h3>
+      <div>
+        <label><input type="checkbox" id="chk-passive"> Passive Player Turn</label>
+      </div>
+      <button onclick="rollDice()">🎲 Roll 5 Dice</button>
 
-  <script>
-    const img = document.getElementById('board');
-    const canvas = document.getElementById('canvas');
-    const ctx = canvas.getContext('2d');
-    let points = [];
-
-    function initCanvas() {
-      canvas.width = img.naturalWidth || img.clientWidth;
-      canvas.height = img.naturalHeight || img.clientHeight;
-      redraw();
-    }
-
-    function redraw() {
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.font = `${Math.max(12, canvas.width / 100)}px sans-serif`;
-
-      points.forEach((p, i) => {
-        const px = p.x * canvas.width;
-        const py = p.y * canvas.height;
-        const r = canvas.width / 120;
-
-        // Draw dot & label
-        ctx.fillStyle = '#22c55e';
-        ctx.beginPath();
-        ctx.arc(px, py, r, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2;
-        ctx.strokeText(`${i+1}: ${p.label}`, px + r + 2, py + 4);
-        ctx.fillText(`${i+1}: ${p.label}`, px + r + 2, py + 4);
-      });
-
-      updateList();
-    }
-
-    canvas.addEventListener('click', (e) => {
-      const rect = canvas.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / rect.width;
-      const y = (e.clientY - rect.top) / rect.height;
-
-      const label = prompt("Enter label for this box (e.g. path_7, start_2, howler_1):");
-      if (label) {
-        points.push({ label: label.trim(), x: Number(x.toFixed(4)), y: Number(y.toFixed(4)) });
-        redraw();
-      }
-    });
-
-    function undoLast() {
-      points.pop();
-      redraw();
-    }
-
-    function clearAll() {
-      if (confirm("Delete all points?")) { points = []; redraw(); }
-    }
-
-    function updateList() {
-      const el = document.getElementById('list');
-      if (points.length === 0) { el.textContent = "No points added yet."; return; }
-      el.textContent = JSON.stringify(points, null, 2);
-    }
-
-    function copyData() {
-      navigator.clipboard.writeText(JSON.stringify(points, null, 2));
-      alert("Coordinate data copied to clipboard! Paste it into our chat.");
-    }
-
-    window.addEventListener('resize', initCanvas);
-  </script>
-</body>
-</html>
+      <div class="
