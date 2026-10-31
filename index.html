@@ -63,7 +63,7 @@
       cursor: pointer;
     }
     .panel {
-      width: 340px;
+      width: 320px;
       background: #1f1f23;
       padding: 16px;
       border-radius: 8px;
@@ -77,8 +77,8 @@
       margin: 8px 0;
     }
     .die {
-      width: 40px;
-      height: 40px;
+      width: 42px;
+      height: 42px;
       background: #fff;
       color: #000;
       font-weight: bold;
@@ -105,22 +105,13 @@
     button:hover { background: #1d4ed8; }
     button.active { background: #16a34a; }
     button.danger { background: #dc2626; }
-    .pairs-box {
-      background: #27272a;
-      padding: 12px;
-      border-radius: 6px;
-      font-size: 14px;
-      line-height: 1.5;
-      color: #eab308;
-      min-height: 50px;
-    }
     .history-log {
       background: #27272a;
       padding: 10px;
       border-radius: 6px;
       font-size: 13px;
       line-height: 1.4;
-      max-height: 150px;
+      max-height: 200px;
       overflow-y: auto;
     }
     .calib-banner {
@@ -141,7 +132,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.1.3</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.0</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -162,9 +153,6 @@
 
     <div class="panel">
       <h3>Dice Controls</h3>
-      <div>
-        <label><input type="checkbox" id="chk-passive" onchange="rollDice()"> Passive Player Turn</label>
-      </div>
       <button onclick="rollDice()">🎲 Roll 5 Dice</button>
 
       <div class="dice-group">
@@ -174,9 +162,6 @@
         <div class="die" id="d3">-</div>
         <div class="die black" id="d4">-</div>
       </div>
-
-      <h4>Possible Pair Sums</h4>
-      <div id="pairs-output" class="pairs-box">Roll dice to view available pair numbers.</div>
 
       <hr style="border-color: #3f3f46;">
 
@@ -188,7 +173,9 @@
   <script>
     let calibrationMode = false;
     let markHistory = [];
-    let activeSumsList = [];
+
+    // Active dice state
+    let poolDice = []; // Objects: { id, val }
 
     const points = [
       { "label": "start_2", "x": 0.202, "y": 0.0783 },
@@ -219,6 +206,7 @@
       { "label": "purple_pup_2", "x": 0.3545, "y": 0.0882 },
       { "label": "purple_pup_3", "x": 0.3551, "y": 0.1107 },
       { "label": "purple_pup_final", "x": 0.3545, "y": 0.1332 },
+      { "label": "purple_pup_target", "x": 0.305, "y": 0.1000 },
       { "label": "gold_3", "x": 0.6625, "y": 0.5196 },
       { "label": "gold_11", "x": 0.3173, "y": 0.3558 },
       { "label": "perk_hp_activator", "x": 0.8924, "y": 0.1621 },
@@ -265,7 +253,9 @@
       { "label": "Green_growler_2", "x": 0.635, "y": 0.1967 },
       { "label": "Green_growler_3", "x": 0.635, "y": 0.2202 },
       { "label": "Green_growler_final", "x": 0.6339, "y": 0.2437 },
-      { "label": "punk_hare_1", "x": 0.6667, "y": 0.6987 }
+      { "label": "green_growler_target", "x": 0.585, "y": 0.2000 },
+      { "label": "punk_hare_1", "x": 0.6667, "y": 0.6987 },
+      { "label": "punk_hare_target", "x": 0.620, "y": 0.7300 }
     ];
 
     points.forEach(p => p.marked = false);
@@ -283,13 +273,32 @@
       }
     }
 
-    function isMonsterHpLabel(label) {
-      const l = label.toLowerCase();
-      return l.includes('pup') || l.includes('growler') || l.includes('hare');
+    function getValidPairs(diceArr) {
+      const pairs = [];
+      for (let i = 0; i < diceArr.length; i++) {
+        for (let j = i + 1; j < diceArr.length; j++) {
+          pairs.push({
+            sum: diceArr[i].val + diceArr[j].val,
+            isDouble: diceArr[i].val === diceArr[j].val,
+            diceIds: [diceArr[i].id, diceArr[j].id]
+          });
+        }
+      }
+      return pairs;
     }
 
-    function getFirstUnmarkedMonsterBox(monsterPrefix) {
-      const hpPoints = points.filter(p => p.label.toLowerCase().includes(monsterPrefix.toLowerCase()));
+    function consumeDiceForSum(sumVal, isDoubleReq) {
+      const valid = getValidPairs(poolDice);
+      const match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+      if (match) {
+        poolDice = poolDice.filter(d => !match.diceIds.includes(d.id));
+        return true;
+      }
+      return false;
+    }
+
+    function getNextUnmarkedMonsterBox(prefix) {
+      const hpPoints = points.filter(p => p.label.toLowerCase().includes(prefix.toLowerCase()) && !p.label.endsWith('_target'));
       return hpPoints.find(p => !p.marked);
     }
 
@@ -297,51 +306,53 @@
       syncCanvasSize();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
+
       points.forEach((p) => {
         const px = p.x * canvas.width;
         const py = p.y * canvas.height;
         const radius = Math.max(8, canvas.width * 0.012);
 
-        const isMonster = isMonsterHpLabel(p.label);
+        const isTargetZone = p.label.endsWith('_target');
 
         let isHighlighted = false;
-        if (activeSumsList.length > 0) {
+        if (validPairs.length > 0 && !p.marked) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.includes('double');
 
-          isHighlighted = activeSumsList.some(item => {
-            if (numVal && item.sum === numVal) {
-              return isDoubleReq ? item.isDouble : true;
+          // Normal space highlighting
+          if (!isTargetZone) {
+            isHighlighted = validPairs.some(pair => {
+              if (numVal && pair.sum === numVal) {
+                return isDoubleReq ? pair.isDouble : true;
+              }
+              if (isDoubleReq && !numVal) return pair.isDouble;
+              return false;
+            });
+          } else {
+            // Monster Portrait Target Zone highlighting
+            let prefix = p.label.replace('_target', '');
+            const nextHp = getNextUnmarkedMonsterBox(prefix);
+            if (nextHp) {
+              const hpNum = parseInt(nextHp.label.replace(/\D/g, ''));
+              isHighlighted = validPairs.some(pair => pair.sum === hpNum);
             }
-            if (isDoubleReq && !numVal) return item.isDouble;
-            return false;
-          });
-        }
-
-        if (isMonster && isHighlighted && !p.marked) {
-          let prefix = '';
-          const l = p.label.toLowerCase();
-          if (l.includes('pup')) prefix = 'purple_pup';
-          else if (l.includes('growler')) prefix = 'green_growler';
-          else if (l.includes('hare')) prefix = 'punk_hare';
-
-          const firstOpen = getFirstUnmarkedMonsterBox(prefix);
-          if (p !== firstOpen) {
-            isHighlighted = false;
           }
         }
 
-        if (isHighlighted && !p.marked) {
+        if (isHighlighted) {
           ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
           ctx.strokeStyle = '#eab308';
           ctx.lineWidth = 2;
           ctx.beginPath();
-          ctx.arc(px, py, isMonster ? radius * 0.6 : radius, 0, Math.PI * 2);
+          ctx.arc(px, py, isTargetZone ? radius * 1.5 : radius, 0, Math.PI * 2);
           ctx.fill(); ctx.stroke();
         }
 
+        // Draw Marks
         if (p.marked) {
-          if (isMonster) {
+          const l = p.label.toLowerCase();
+          if (l.includes('pup') || l.includes('growler') || l.includes('hare')) {
             ctx.fillStyle = '#dc2626';
             ctx.fillRect(px - radius/2, py - radius/2, radius, radius);
           } else {
@@ -354,6 +365,7 @@
           }
         }
 
+        // Calibration overlay
         if (calibrationMode) {
           ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
           ctx.strokeStyle = '#1d4ed8';
@@ -395,48 +407,58 @@
       } else {
         if (hitIdx >= 0) {
           const pt = points[hitIdx];
-          pt.marked = !pt.marked;
-          markHistory.push(pt);
-          logAction(`${pt.marked ? 'Marked' : 'Unmarked'} ${pt.label}`);
+          
+          if (pt.label.endsWith('_target')) {
+            const prefix = pt.label.replace('_target', '');
+            const hpBox = getNextUnmarkedMonsterBox(prefix);
+            if (hpBox) {
+              const hpNum = parseInt(hpBox.label.replace(/\D/g, ''));
+              if (consumeDiceForSum(hpNum, false)) {
+                hpBox.marked = true;
+                markHistory.push({ pt: hpBox, consumed: true });
+                logAction(`Hit ${prefix} for ${hpNum}`);
+              }
+            }
+          } else {
+            const numVal = parseInt(pt.label.replace(/\D/g, ''));
+            const isDoubleReq = pt.label.includes('double');
+
+            if (!pt.marked && numVal) {
+              if (consumeDiceForSum(numVal, isDoubleReq)) {
+                pt.marked = true;
+                markHistory.push({ pt: pt, consumed: true });
+                logAction(`Marked ${pt.label}`);
+              }
+            } else {
+              pt.marked = !pt.marked;
+              markHistory.push({ pt: pt, consumed: false });
+              logAction(`Toggled ${pt.label}`);
+            }
+          }
         }
       }
       redraw();
     });
 
     function rollDice() {
-      const isPassive = document.getElementById('chk-passive').checked;
-      const white = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
-      const black = Math.floor(Math.random() * 6) + 1;
+      poolDice = [0,1,2,3,4].map(id => ({
+        id: id,
+        val: Math.floor(Math.random() * 6) + 1
+      }));
 
-      white.forEach((v, i) => document.getElementById(`d${i}`).textContent = v);
-      document.getElementById('d4').textContent = isPassive ? '-' : black;
+      poolDice.forEach((d, i) => {
+        document.getElementById(`d${i}`).textContent = d.val;
+      });
 
-      const currentDice = isPassive ? white : [...white, black];
-      activeSumsList = [];
-
-      for (let i = 0; i < currentDice.length; i++) {
-        for (let j = i + 1; j < currentDice.length; j++) {
-          activeSumsList.push({
-            sum: currentDice[i] + currentDice[j],
-            isDouble: currentDice[i] === currentDice[j]
-          });
-        }
-      }
-
-      // Display simple text list of valid numbers
-      const formatted = activeSumsList
-        .map(s => `${s.sum}${s.isDouble ? ' (Double!)' : ''}`)
-        .join(', ');
-
-      document.getElementById('pairs-output').innerHTML = `<strong>Valid Numbers:</strong><br>${formatted}`;
+      logAction(`Rolled dice: ${poolDice.map(d => d.val).join(', ')}`);
       redraw();
     }
 
     function undoMark() {
       if (markHistory.length > 0) {
         const last = markHistory.pop();
-        last.marked = !last.marked;
-        logAction(`Undid mark on ${last.label}`);
+        last.pt.marked = !last.pt.marked;
+        logAction(`Undid mark on ${last.pt.label}`);
         redraw();
       }
     }
