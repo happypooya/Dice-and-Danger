@@ -132,7 +132,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.0</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.1</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -175,10 +175,11 @@
 
   <script>
     let calibrationMode = false;
+    let allowEditingPoints = true;
     let markHistory = [];
 
     // Active dice state
-    let poolDice = []; // Objects: { id, val }
+    let poolDice = [];
 
     const points = [
       { "label": "start_2", "x": 0.202, "y": 0.0783 },
@@ -209,7 +210,7 @@
       { "label": "purple_pup_2", "x": 0.3545, "y": 0.0882 },
       { "label": "purple_pup_3", "x": 0.3551, "y": 0.1107 },
       { "label": "purple_pup_final", "x": 0.3545, "y": 0.1332 },
-      { "label": "purple_pup_target", "x": 0.305, "y": 0.1000 },
+      { "label": "purple_pup_target", "x": 0.305, "y": 0.1 },
       { "label": "gold_3", "x": 0.6625, "y": 0.5196 },
       { "label": "gold_11", "x": 0.3173, "y": 0.3558 },
       { "label": "perk_hp_activator", "x": 0.8924, "y": 0.1621 },
@@ -256,9 +257,44 @@
       { "label": "Green_growler_2", "x": 0.635, "y": 0.1967 },
       { "label": "Green_growler_3", "x": 0.635, "y": 0.2202 },
       { "label": "Green_growler_final", "x": 0.6339, "y": 0.2437 },
-      { "label": "green_growler_target", "x": 0.585, "y": 0.2000 },
+      { "label": "green_growler_target", "x": 0.585, "y": 0.2 },
       { "label": "punk_hare_1", "x": 0.6667, "y": 0.6987 },
-      { "label": "punk_hare_target", "x": 0.620, "y": 0.7300 }
+      { "label": "punk_hare_target", "x": 0.62, "y": 0.73 },
+      { "label": "punk_hare_2", "x": 0.6798, "y": 0.6965 },
+      { "label": "punk_hare_3", "x": 0.6798, "y": 0.7199 },
+      { "label": "punk_hare_4", "x": 0.6787, "y": 0.7403 },
+      { "label": "punk_hare_final", "x": 0.6808, "y": 0.7637 },
+      { "label": "primal_hare_target", "x": 0.4319, "y": 0.6902 },
+      { "label": "primal_hare_1", "x": 0.4753, "y": 0.6542 },
+      { "label": "primal_hare_2", "x": 0.4902, "y": 0.6527 },
+      { "label": "primal_hare_3", "x": 0.4912, "y": 0.6777 },
+      { "label": "primal_hare_4", "x": 0.4902, "y": 0.6965 },
+      { "label": "primal_hare_final", "x": 0.4902, "y": 0.7199 },
+      { "label": "white_wolf_target", "x": 0.2751, "y": 0.709 },
+      { "label": "white_wolf_1", "x": 0.3217, "y": 0.6793 },
+      { "label": "white_wolf_2", "x": 0.3355, "y": 0.6793 },
+      { "label": "white_wolf_4", "x": 0.3355, "y": 0.7262 },
+      { "label": "white_wolf_final", "x": 0.3366, "y": 0.7449 },
+      { "label": "white_wolf_3", "x": 0.3355, "y": 0.7012 },
+      { "label": "Beefy_bearpion_Boss_target", "x": 0.4711, "y": 0.4791 },
+      { "label": "Beefy_bearpion_Boss_1", "x": 0.5654, "y": 0.4228 },
+      { "label": "Beefy_bearpion_Boss_2", "x": 0.5664, "y": 0.4431 },
+      { "label": "Beefy_bearpion_Boss_3", "x": 0.5654, "y": 0.4666 },
+      { "label": "Beefy_bearpion_Boss_4", "x": 0.5834, "y": 0.4212 },
+      { "label": "Beefy_bearpion_Boss_5", "x": 0.5834, "y": 0.4416 },
+      { "label": "Beefy_bearpion_Boss_6", "x": 0.5823, "y": 0.4666 },
+      { "label": "Beefy_bearpion_Boss_7", "x": 0.5654, "y": 0.4947 },
+      { "label": "Beefy_bearpion_Boss_8", "x": 0.5664, "y": 0.5151 },
+      { "label": "Beefy_bearpion_Boss_9", "x": 0.5664, "y": 0.5338 },
+      { "label": "Beefy_bearpion_Boss_10", "x": 0.5834, "y": 0.4947 },
+      { "label": "Beefy_bearpion_Boss_11", "x": 0.5834, "y": 0.5151 },
+      { "label": "Beefy_bearpion_Boss_12", "x": 0.5834, "y": 0.5354 },
+      { "label": "Grey_hound_target", "x": 0.1766, "y": 0.3696 },
+      { "label": "Grey_hound_1", "x": 0.237, "y": 0.3274 },
+      { "label": "Grey_hound_2", "x": 0.237, "y": 0.3524 },
+      { "label": "Grey_hound_3", "x": 0.237, "y": 0.3759 },
+      { "label": "Grey_hound_4", "x": 0.237, "y": 0.3962 },
+      { "label": "fist_double_10", "x": 0.3874, "y": 0.0584 }
     ];
 
     points.forEach(p => p.marked = false);
@@ -300,9 +336,22 @@
       return false;
     }
 
+    function isMonsterHpBox(label) {
+      const l = label.toLowerCase();
+      const isMonsterName = l.includes('pup') || l.includes('growler') || l.includes('hare') || l.includes('wolf') || l.includes('hound') || l.includes('bearpion') || l.includes('boss');
+      return isMonsterName && !l.endsWith('_target');
+    }
+
     function getNextUnmarkedMonsterBox(prefix) {
-      const hpPoints = points.filter(p => p.label.toLowerCase().includes(prefix.toLowerCase()) && !p.label.endsWith('_target'));
+      const hpPoints = points.filter(p => p.label.toLowerCase().startsWith(prefix.toLowerCase()) && !p.label.toLowerCase().endsWith('_target'));
       return hpPoints.find(p => !p.marked);
+    }
+
+    function toggleEditLock() {
+      allowEditingPoints = !allowEditingPoints;
+      const btn = document.getElementById('btn-lock-edit');
+      btn.textContent = allowEditingPoints ? '✏️ Edit/Delete: ENABLED' : '➕ Add Only Mode (Editing Locked)';
+      btn.style.background = allowEditingPoints ? '#2563eb' : '#16a34a';
     }
 
     function redraw() {
@@ -316,14 +365,16 @@
         const py = p.y * canvas.height;
         const radius = Math.max(8, canvas.width * 0.012);
 
-        const isTargetZone = p.label.endsWith('_target');
+        const isTargetZone = p.label.toLowerCase().endsWith('_target');
+        const isHpBox = isMonsterHpBox(p.label);
 
         let isHighlighted = false;
-        if (validPairs.length > 0 && !p.marked) {
+
+        // ONLY highlight portrait targets or regular spaces (never floating HP boxes)
+        if (validPairs.length > 0 && !p.marked && !isHpBox) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.includes('double');
 
-          // Normal space highlighting
           if (!isTargetZone) {
             isHighlighted = validPairs.some(pair => {
               if (numVal && pair.sum === numVal) {
@@ -333,8 +384,8 @@
               return false;
             });
           } else {
-            // Monster Portrait Target Zone highlighting
-            let prefix = p.label.replace('_target', '');
+            // Check if monster has open HP box matching current valid dice sums
+            let prefix = p.label.substring(0, p.label.toLowerCase().indexOf('_target'));
             const nextHp = getNextUnmarkedMonsterBox(prefix);
             if (nextHp) {
               const hpNum = parseInt(nextHp.label.replace(/\D/g, ''));
@@ -352,10 +403,9 @@
           ctx.fill(); ctx.stroke();
         }
 
-        // Draw Marks
+        // Draw Damage / Marks
         if (p.marked) {
-          const l = p.label.toLowerCase();
-          if (l.includes('pup') || l.includes('growler') || l.includes('hare')) {
+          if (isHpBox) {
             ctx.fillStyle = '#dc2626';
             ctx.fillRect(px - radius/2, py - radius/2, radius, radius);
           } else {
@@ -368,7 +418,7 @@
           }
         }
 
-        // Calibration overlay
+        // Calibration Mode Overlay
         if (calibrationMode) {
           ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
           ctx.strokeStyle = '#1d4ed8';
@@ -382,15 +432,6 @@
           ctx.fillText(p.label, px + radius + 2, py + 3);
         }
       });
-    }
-
-    let allowEditingPoints = true;
-
-    function toggleEditLock() {
-      allowEditingPoints = !allowEditingPoints;
-      const btn = document.getElementById('btn-lock-edit');
-      btn.textContent = allowEditingPoints ? '✏️ Edit/Delete: ENABLED' : '➕ Add Only Mode (Editing Locked)';
-      btn.style.background = allowEditingPoints ? '#2563eb' : '#16a34a';
     }
 
     canvas.addEventListener('click', (e) => {
@@ -421,8 +462,8 @@
         if (hitIdx >= 0) {
           const pt = points[hitIdx];
           
-          if (pt.label.endsWith('_target')) {
-            const prefix = pt.label.replace('_target', '');
+          if (pt.label.toLowerCase().endsWith('_target')) {
+            let prefix = pt.label.substring(0, pt.label.toLowerCase().indexOf('_target'));
             const hpBox = getNextUnmarkedMonsterBox(prefix);
             if (hpBox) {
               const hpNum = parseInt(hpBox.label.replace(/\D/g, ''));
