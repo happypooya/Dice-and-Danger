@@ -3,190 +3,41 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dungeons, Dice & Danger - Annoyed Animals</title>
+  <title>Board Calibrator - Dungeons, Dice & Danger</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      font-family: system-ui, -apple-system, sans-serif;
-      background: #111113;
-      color: #f4f4f5;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      padding: 12px;
-    }
-    header {
-      width: 100%;
-      max-width: 1280px;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #18181b;
-      padding: 10px 18px;
-      border-radius: 8px;
-      margin-bottom: 10px;
-    }
-    .main-layout {
-      display: flex;
-      gap: 16px;
-      max-width: 1280px;
-      width: 100%;
-    }
-    #game-container {
-      position: relative;
-      flex: 1;
-      background: #000;
-      border-radius: 8px;
-      overflow: hidden;
-      box-shadow: 0 8px 24px rgba(0,0,0,0.5);
-    }
-    #board-img {
-      display: block;
-      width: 100%;
-      height: auto;
-      user-select: none;
-    }
-    #overlay-canvas {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      cursor: pointer;
-    }
-    .panel {
-      width: 320px;
-      background: #18181b;
-      padding: 16px;
-      border-radius: 8px;
-      display: flex;
-      flex-direction: column;
-      gap: 14px;
-    }
-    .dice-group {
-      display: flex;
-      gap: 6px;
-      margin: 8px 0;
-    }
-    .die {
-      width: 40px;
-      height: 40px;
-      background: #fff;
-      color: #000;
-      font-weight: bold;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border-radius: 6px;
-    }
-    .die.black {
-      background: #000;
-      color: #fff;
-      border: 1px solid #555;
-    }
-    button {
-      background: #2563eb;
-      color: white;
-      border: none;
-      padding: 8px 12px;
-      border-radius: 6px;
-      font-weight: 600;
-      cursor: pointer;
-    }
-    button:hover { background: #1d4ed8; }
-    button.active { background: #16a34a; }
+    body { font-family: sans-serif; background: #121214; color: #fff; padding: 15px; text-align: center; }
+    #toolbar { margin-bottom: 12px; display: flex; justify-content: center; gap: 12px; }
+    button { padding: 8px 16px; font-weight: bold; background: #2563eb; color: white; border: none; border-radius: 4px; cursor: pointer; }
     button.danger { background: #dc2626; }
-    .score-card {
-      background: #27272a;
-      padding: 12px;
-      border-radius: 6px;
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      font-size: 14px;
-    }
-    .score-row {
-      display: flex;
-      justify-content: space-between;
-    }
-    .total-score {
-      font-size: 18px;
-      font-weight: bold;
-      color: #22c55e;
-      border-top: 1px solid #3f3f46;
-      padding-top: 6px;
-      margin-top: 4px;
-    }
+    #container { position: relative; display: inline-block; max-width: 100%; border: 2px solid #333; }
+    #board { display: block; max-width: 100%; height: auto; user-select: none; }
+    #canvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; cursor: crosshair; }
+    #list { margin-top: 15px; max-width: 800px; text-align: left; background: #222; padding: 10px; border-radius: 6px; font-family: monospace; font-size: 12px; max-height: 200px; overflow-y: auto; }
   </style>
 </head>
 <body>
 
-  <header>
-    <h2>Dungeons, Dice & Danger: Annoyed Animals</h2>
-    <div>
-      <button id="btn-mode" onclick="toggleCalibration()">🔧 Calibration Mode</button>
-      <button onclick="resetBoard()" class="danger">Reset Game</button>
-    </div>
-  </header>
+  <h2>Board Coordinate Mapper</h2>
+  <div id="toolbar">
+    <button onclick="copyData()">📋 Copy Coordinate Data</button>
+    <button onclick="undoLast()" class="danger">↩ Undo Last Point</button>
+    <button onclick="clearAll()" class="danger">🗑 Clear All</button>
+  </div>
+  <p>Click any box on the image, then enter its label (e.g., <code>start_2</code>, <code>path_7</code>, <code>howler_hp1</code>).</p>
 
-  <div class="main-layout">
-    <div id="game-container">
-      <img id="board-img" src="https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/Scan_20261031_124717.jpg" alt="Board" onload="initCanvas()">
-      <canvas id="overlay-canvas"></canvas>
-    </div>
-
-    <div class="panel">
-      <h3>Dice Roller</h3>
-      <div>
-        <label><input type="checkbox" id="chk-passive"> Passive Turn (Needs Black Die symbol)</label>
-      </div>
-      <button onclick="rollDice()">🎲 Roll Dice</button>
-
-      <div class="dice-group">
-        <div class="die" id="d0">-</div>
-        <div class="die" id="d1">-</div>
-        <div class="die" id="d2">-</div>
-        <div class="die" id="d3">-</div>
-        <div class="die black" id="d4">-</div>
-      </div>
-
-      <div style="font-size:13px; color:#a1a1aa;" id="pairs-output">Roll to see valid pair sums.</div>
-
-      <hr style="border-color: #27272a;">
-
-      <h3>Automatic Score Sheet</h3>
-      <div class="score-card">
-        <div class="score-row"><span>Monster VP:</span><span id="score-monsters">0</span></div>
-        <div class="score-row"><span>Gold Rewards (2 VP ea):</span><span id="score-gold">0</span></div>
-        <div class="score-row"><span>Gem Rewards (3 VP ea):</span><span id="score-gems">0</span></div>
-        <div class="score-row"><span>HP Penalty:</span><span id="score-hp">-0</span></div>
-        <div class="score-row total-score"><span>TOTAL VP:</span><span id="score-total">0</span></div>
-      </div>
-    </div>
+  <div id="container">
+    <img id="board" src="https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/Scan_20261031_124717.jpg" onload="initCanvas()">
+    <canvas id="canvas"></canvas>
   </div>
 
+  <div id="list" id="output">No points added yet.</div>
+
   <script>
-    const img = document.getElementById('board-img');
-    const canvas = document.getElementById('overlay-canvas');
+    const img = document.getElementById('board');
+    const canvas = document.getElementById('canvas');
     const ctx = canvas.getContext('2d');
-
-    let calibrationMode = false;
-    let selectedZone = null;
-
-    // Defined grid regions & targets (percentages based on image dimensions)
-    const zones = [
-      // Example target zones mapped to canvas coordinates
-      { id: 'start_2', type: 'start', val: 2, x: 0.19, y: 0.28, marked: false },
-      { id: 'start_9', type: 'start', val: 9, x: 0.19, y: 0.33, marked: false },
-      { id: 'start_6', type: 'start', val: 6, x: 0.19, y: 0.38, marked: false },
-      
-      // Monster: Purple Howler Life Boxes
-      { id: 'p_howler_1', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.26, marked: false },
-      { id: 'p_howler_2', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.29, marked: false },
-      { id: 'p_howler_3', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.32, marked: false },
-      { id: 'p_howler_4', type: 'monster_box', monster: 'Purple Howler', x: 0.29, y: 0.35, marked: false }
-    ];
+    let points = [];
 
     function initCanvas() {
       canvas.width = img.naturalWidth || img.clientWidth;
@@ -196,87 +47,59 @@
 
     function redraw() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = `${Math.max(12, canvas.width / 100)}px sans-serif`;
 
-      zones.forEach(z => {
-        const px = z.x * canvas.width;
-        const py = z.y * canvas.height;
-        const size = canvas.width * 0.022;
+      points.forEach((p, i) => {
+        const px = p.x * canvas.width;
+        const py = p.y * canvas.height;
+        const r = canvas.width / 120;
 
-        if (z.marked) {
-          // Draw a precise red X fitted directly inside the box
-          ctx.strokeStyle = '#e11d48';
-          ctx.lineWidth = Math.max(2, canvas.width / 350);
-          ctx.beginPath();
-          ctx.moveTo(px - size/2, py - size/2); ctx.lineTo(px + size/2, py + size/2);
-          ctx.moveTo(px + size/2, py - size/2); ctx.lineTo(px - size/2, py + size/2);
-          ctx.stroke();
-        }
+        // Draw dot & label
+        ctx.fillStyle = '#22c55e';
+        ctx.beginPath();
+        ctx.arc(px, py, r, 0, Math.PI * 2);
+        ctx.fill();
 
-        if (calibrationMode) {
-          ctx.strokeStyle = z === selectedZone ? '#f59e0b' : '#3b82f6';
-          ctx.lineWidth = 2;
-          ctx.strokeRect(px - size/2, py - size/2, size, size);
-        }
+        ctx.fillStyle = '#ffffff';
+        ctx.strokeStyle = '#000000';
+        ctx.lineWidth = 2;
+        ctx.strokeText(`${i+1}: ${p.label}`, px + r + 2, py + 4);
+        ctx.fillText(`${i+1}: ${p.label}`, px + r + 2, py + 4);
       });
 
-      calculateScore();
+      updateList();
     }
 
     canvas.addEventListener('click', (e) => {
       const rect = canvas.getBoundingClientRect();
-      const clickX = (e.clientX - rect.left) / rect.width;
-      const clickY = (e.clientY - rect.top) / rect.height;
+      const x = (e.clientX - rect.left) / rect.width;
+      const y = (e.clientY - rect.top) / rect.height;
 
-      // Find closest zone
-      const hit = zones.find(z => Math.hypot(z.x - clickX, z.y - clickY) < 0.025);
-
-      if (calibrationMode && hit) {
-        selectedZone = hit;
-      } else if (hit) {
-        hit.marked = !hit.marked;
-      }
-      redraw();
-    });
-
-    function rollDice() {
-      const isPassive = document.getElementById('chk-passive').checked;
-      const white = [0,1,2,3].map(() => Math.floor(Math.random() * 6) + 1);
-      const black = Math.floor(Math.random() * 6) + 1;
-
-      white.forEach((v, i) => document.getElementById(`d${i}`).textContent = v);
-      document.getElementById('d4').textContent = black;
-
-      const sums = new Set();
-      for (let i = 0; i < 4; i++) {
-        for (let j = i + 1; j < 4; j++) sums.add(white[i] + white[j]);
-      }
-      if (!isPassive) white.forEach(w => sums.add(w + black));
-
-      const arr = Array.from(sums).sort((a,b) => a - b);
-      document.getElementById('pairs-output').innerHTML = `<strong>Sums:</strong> ${arr.join(', ')}`;
-    }
-
-    function calculateScore() {
-      // Monster tracking logic
-      const howlerBoxes = zones.filter(z => z.monster === 'Purple Howler');
-      const howlerDefeated = howlerBoxes.length > 0 && howlerBoxes.every(z => z.marked);
-      const monsterVP = howlerDefeated ? 12 : 0; // 12 VP for Purple Howler
-
-      document.getElementById('score-monsters').textContent = monsterVP;
-      document.getElementById('score-total').textContent = monsterVP;
-    }
-
-    function toggleCalibration() {
-      calibrationMode = !calibrationMode;
-      document.getElementById('btn-mode').classList.toggle('active', calibrationMode);
-      redraw();
-    }
-
-    function resetBoard() {
-      if (confirm("Reset game board?")) {
-        zones.forEach(z => z.marked = false);
+      const label = prompt("Enter label for this box (e.g. path_7, start_2, howler_1):");
+      if (label) {
+        points.push({ label: label.trim(), x: Number(x.toFixed(4)), y: Number(y.toFixed(4)) });
         redraw();
       }
+    });
+
+    function undoLast() {
+      points.pop();
+      redraw();
+    }
+
+    function clearAll() {
+      if (confirm("Delete all points?")) { points = []; redraw(); }
+    }
+
+    function updateList() {
+      const el = document.getElementById('list');
+      if (points.length === 0) { el.textContent = "No points added yet."; return; }
+      el.textContent = JSON.stringify(points, null, 2);
+    }
+
+    function copyData() {
+      navigator.clipboard.writeText(JSON.stringify(points, null, 2));
+      alert("Coordinate data copied to clipboard! Paste it into our chat.");
     }
 
     window.addEventListener('resize', initCanvas);
