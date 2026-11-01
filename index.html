@@ -132,7 +132,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.1</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.3</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -303,6 +303,17 @@
     const canvas = document.getElementById('overlay-canvas');
     const ctx = canvas.getContext('2d');
 
+    // Map each monster prefix to its required dice sums per HP slot
+    const monsterHpRequirements = {
+      purple_pup: [3, 4, 11, 11],
+      green_growler: [3, 5, 8, 11],
+      grey_hound: [3, 8, 10, 10],
+      white_wolf: [4, 5, 8, 8],
+      primal_hare: [2, 12],
+      punk_hare: [3, 11],
+      beefy_bearpion_boss: [3, 4, 5, 8, 11]
+    };
+
     function syncCanvasSize() {
       const w = img.clientWidth;
       const h = img.clientHeight;
@@ -343,8 +354,29 @@
     }
 
     function getNextUnmarkedMonsterBox(prefix) {
-      const hpPoints = points.filter(p => p.label.toLowerCase().startsWith(prefix.toLowerCase()) && !p.label.toLowerCase().endsWith('_target'));
+      const targetPrefix = prefix.toLowerCase();
+      const hpPoints = points.filter(p => {
+        const lbl = p.label.toLowerCase();
+        return lbl.startsWith(targetPrefix) && !lbl.endsWith('_target');
+      });
       return hpPoints.find(p => !p.marked);
+    }
+
+    function getRequiredSumForHpBox(prefix, hpBoxLabel) {
+      const targetPrefix = prefix.toLowerCase();
+      const reqs = monsterHpRequirements[targetPrefix];
+      if (!reqs) return parseInt(hpBoxLabel.replace(/\D/g, ''));
+
+      const hpPoints = points.filter(p => {
+        const lbl = p.label.toLowerCase();
+        return lbl.startsWith(targetPrefix) && !lbl.endsWith('_target');
+      });
+
+      const idx = hpPoints.findIndex(p => p.label === hpBoxLabel);
+      if (idx >= 0 && idx < reqs.length) {
+        return reqs[idx];
+      }
+      return reqs[reqs.length - 1];
     }
 
     function toggleEditLock() {
@@ -370,7 +402,7 @@
 
         let isHighlighted = false;
 
-        // ONLY highlight portrait targets or regular spaces (never floating HP boxes)
+        // ONLY highlight portrait targets or regular map spaces
         if (validPairs.length > 0 && !p.marked && !isHpBox) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.includes('double');
@@ -384,12 +416,14 @@
               return false;
             });
           } else {
-            // Check if monster has open HP box matching current valid dice sums
-            let prefix = p.label.substring(0, p.label.toLowerCase().indexOf('_target'));
+            // Case-insensitive target prefix matching
+            const targetIdx = p.label.toLowerCase().indexOf('_target');
+            const prefix = p.label.substring(0, targetIdx);
             const nextHp = getNextUnmarkedMonsterBox(prefix);
+
             if (nextHp) {
-              const hpNum = parseInt(nextHp.label.replace(/\D/g, ''));
-              isHighlighted = validPairs.some(pair => pair.sum === hpNum);
+              const reqSum = getRequiredSumForHpBox(prefix, nextHp.label);
+              isHighlighted = validPairs.some(pair => pair.sum === reqSum);
             }
           }
         }
@@ -463,14 +497,16 @@
           const pt = points[hitIdx];
           
           if (pt.label.toLowerCase().endsWith('_target')) {
-            let prefix = pt.label.substring(0, pt.label.toLowerCase().indexOf('_target'));
+            const targetIdx = pt.label.toLowerCase().indexOf('_target');
+            const prefix = pt.label.substring(0, targetIdx);
             const hpBox = getNextUnmarkedMonsterBox(prefix);
+
             if (hpBox) {
-              const hpNum = parseInt(hpBox.label.replace(/\D/g, ''));
-              if (consumeDiceForSum(hpNum, false)) {
+              const reqSum = getRequiredSumForHpBox(prefix, hpBox.label);
+              if (consumeDiceForSum(reqSum, false)) {
                 hpBox.marked = true;
                 markHistory.push({ pt: hpBox, consumed: true });
-                logAction(`Hit ${prefix} for ${hpNum}`);
+                logAction(`Hit ${prefix} for ${reqSum}`);
               }
             }
           } else {
