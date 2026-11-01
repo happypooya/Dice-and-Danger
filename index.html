@@ -105,15 +105,27 @@
     button:hover { background: #1d4ed8; }
     button.active { background: #16a34a; }
     button.danger { background: #dc2626; }
-    .history-log {
+    .pairs-display {
       background: #27272a;
-      padding: 10px;
+      padding: 12px;
       border-radius: 6px;
       font-size: 13px;
-      line-height: 1.4;
-      max-height: 200px;
-      overflow-y: auto;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
+    .pair-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+    .tag-white { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid #eab308; }
+    .tag-black { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7; }
     .calib-banner {
       width: 100%;
       max-width: 1280px;
@@ -132,7 +144,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.3</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.4</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -155,7 +167,6 @@
     </div>
 
     <div class="panel">
-      <h3>Dice Controls</h3>
       <button onclick="rollDice()">🎲 Roll 5 Dice</button>
 
       <div class="dice-group">
@@ -168,8 +179,8 @@
 
       <hr style="border-color: #3f3f46;">
 
-      <h3>Action Log</h3>
-      <div class="history-log" id="action-log">No actions recorded yet.</div>
+      <h3>Available Pairs</h3>
+      <div id="pairs-container" class="pairs-display">Roll dice to see available combinations.</div>
     </div>
   </div>
 
@@ -303,7 +314,6 @@
     const canvas = document.getElementById('overlay-canvas');
     const ctx = canvas.getContext('2d');
 
-    // Map each monster prefix to its required dice sums per HP slot
     const monsterHpRequirements = {
       purple_pup: [3, 4, 11, 11],
       green_growler: [3, 5, 8, 11],
@@ -327,10 +337,12 @@
       const pairs = [];
       for (let i = 0; i < diceArr.length; i++) {
         for (let j = i + 1; j < diceArr.length; j++) {
+          const usesBlack = diceArr[i].id === 4 || diceArr[j].id === 4;
           pairs.push({
             sum: diceArr[i].val + diceArr[j].val,
             isDouble: diceArr[i].val === diceArr[j].val,
-            diceIds: [diceArr[i].id, diceArr[j].id]
+            usesBlack: usesBlack,
+            diceObjects: [diceArr[i], diceArr[j]]
           });
         }
       }
@@ -339,12 +351,16 @@
 
     function consumeDiceForSum(sumVal, isDoubleReq) {
       const valid = getValidPairs(poolDice);
-      const match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+      // Prefer white-only pairs over black-die pairs if both are available
+      const match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true) && !p.usesBlack) ||
+                    valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+
       if (match) {
-        poolDice = poolDice.filter(d => !match.diceIds.includes(d.id));
-        return true;
+        const removedIds = match.diceObjects.map(d => d.id);
+        poolDice = poolDice.filter(d => !removedIds.includes(d.id));
+        return match.diceObjects; // Return consumed dice for undo stack
       }
-      return false;
+      return null;
     }
 
     function isMonsterHpBox(label) {
@@ -386,11 +402,46 @@
       btn.style.background = allowEditingPoints ? '#2563eb' : '#16a34a';
     }
 
+    function updatePairsPanel(validPairs) {
+      const container = document.getElementById('pairs-container');
+      if (!validPairs || validPairs.length === 0) {
+        container.innerHTML = '<div>No active pairs remaining. Roll dice to start!</div>';
+        return;
+      }
+
+      const whitePairs = [];
+      const blackPairs = [];
+
+      validPairs.forEach(p => {
+        const label = `${p.sum}${p.isDouble ? ' (Dbl)' : ''}`;
+        if (p.usesBlack) {
+          if (!blackPairs.includes(label)) blackPairs.push(label);
+        } else {
+          if (!whitePairs.includes(label)) whitePairs.push(label);
+        }
+      });
+
+      let html = '';
+      if (whitePairs.length > 0) {
+        html += `<div><strong>Standard (White):</strong><br>`;
+        whitePairs.forEach(lbl => html += `<span class="pair-tag tag-white">${lbl}</span>`);
+        html += `</div>`;
+      }
+      if (blackPairs.length > 0) {
+        html += `<div style="margin-top:6px;"><strong>Black Die Required:</strong><br>`;
+        blackPairs.forEach(lbl => html += `<span class="pair-tag tag-black">${lbl}</span>`);
+        html += `</div>`;
+      }
+
+      container.innerHTML = html;
+    }
+
     function redraw() {
       syncCanvasSize();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
+      updatePairsPanel(validPairs);
 
       points.forEach((p) => {
         const px = p.x * canvas.width;
@@ -401,36 +452,49 @@
         const isHpBox = isMonsterHpBox(p.label);
 
         let isHighlighted = false;
+        let isBlackDieMove = false;
 
-        // ONLY highlight portrait targets or regular map spaces
         if (validPairs.length > 0 && !p.marked && !isHpBox) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.includes('double');
 
           if (!isTargetZone) {
-            isHighlighted = validPairs.some(pair => {
+            const matches = validPairs.filter(pair => {
               if (numVal && pair.sum === numVal) {
                 return isDoubleReq ? pair.isDouble : true;
               }
               if (isDoubleReq && !numVal) return pair.isDouble;
               return false;
             });
+            if (matches.length > 0) {
+              isHighlighted = true;
+              // If ALL valid matches require the black die, mark as black die move
+              isBlackDieMove = matches.every(m => m.usesBlack);
+            }
           } else {
-            // Case-insensitive target prefix matching
             const targetIdx = p.label.toLowerCase().indexOf('_target');
             const prefix = p.label.substring(0, targetIdx);
             const nextHp = getNextUnmarkedMonsterBox(prefix);
 
             if (nextHp) {
               const reqSum = getRequiredSumForHpBox(prefix, nextHp.label);
-              isHighlighted = validPairs.some(pair => pair.sum === reqSum);
+              const matches = validPairs.filter(pair => pair.sum === reqSum);
+              if (matches.length > 0) {
+                isHighlighted = true;
+                isBlackDieMove = matches.every(m => m.usesBlack);
+              }
             }
           }
         }
 
         if (isHighlighted) {
-          ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
-          ctx.strokeStyle = '#eab308';
+          if (isBlackDieMove) {
+            ctx.fillStyle = 'rgba(168, 85, 247, 0.45)';
+            ctx.strokeStyle = '#a855f7';
+          } else {
+            ctx.fillStyle = 'rgba(234, 179, 8, 0.45)';
+            ctx.strokeStyle = '#eab308';
+          }
           ctx.lineWidth = 2;
           ctx.beginPath();
           ctx.arc(px, py, isTargetZone ? radius * 1.5 : radius, 0, Math.PI * 2);
@@ -452,7 +516,7 @@
           }
         }
 
-        // Calibration Mode Overlay
+        // Calibration Overlay
         if (calibrationMode) {
           ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
           ctx.strokeStyle = '#1d4ed8';
@@ -503,10 +567,10 @@
 
             if (hpBox) {
               const reqSum = getRequiredSumForHpBox(prefix, hpBox.label);
-              if (consumeDiceForSum(reqSum, false)) {
+              const consumed = consumeDiceForSum(reqSum, false);
+              if (consumed) {
                 hpBox.marked = true;
-                markHistory.push({ pt: hpBox, consumed: true });
-                logAction(`Hit ${prefix} for ${reqSum}`);
+                markHistory.push({ pt: hpBox, consumedDice: consumed });
               }
             }
           } else {
@@ -514,15 +578,15 @@
             const isDoubleReq = pt.label.includes('double');
 
             if (!pt.marked && numVal) {
-              if (consumeDiceForSum(numVal, isDoubleReq)) {
+              const consumed = consumeDiceForSum(numVal, isDoubleReq);
+              if (consumed) {
                 pt.marked = true;
-                markHistory.push({ pt: pt, consumed: true });
-                logAction(`Marked ${pt.label}`);
+                markHistory.push({ pt: pt, consumedDice: consumed });
               }
-            } else {
-              pt.marked = !pt.marked;
-              markHistory.push({ pt: pt, consumed: false });
-              logAction(`Toggled ${pt.label}`);
+            } else if (pt.marked) {
+              // Direct toggle off without dice stack
+              pt.marked = false;
+              markHistory.push({ pt: pt, consumedDice: null });
             }
           }
         }
@@ -540,22 +604,27 @@
         document.getElementById(`d${i}`).textContent = d.val;
       });
 
-      logAction(`Rolled dice: ${poolDice.map(d => d.val).join(', ')}`);
+      markHistory = [];
       redraw();
     }
 
     function undoMark() {
       if (markHistory.length > 0) {
         const last = markHistory.pop();
-        last.pt.marked = !last.pt.marked;
-        logAction(`Undid mark on ${last.pt.label}`);
+        last.pt.marked = false;
+        
+        // Restore consumed dice back to pool
+        if (last.consumedDice && last.consumedDice.length > 0) {
+          last.consumedDice.forEach(d => {
+            if (!poolDice.some(existing => existing.id === d.id)) {
+              poolDice.push(d);
+            }
+          });
+          // Sort dice back by ID
+          poolDice.sort((a, b) => a.id - b.id);
+        }
         redraw();
       }
-    }
-
-    function logAction(msg) {
-      const log = document.getElementById('action-log');
-      log.innerHTML = `<div>• ${msg}</div>` + log.innerHTML;
     }
 
     function toggleCalibration() {
@@ -569,7 +638,6 @@
       if (confirm("Reset all marked spaces?")) {
         points.forEach(p => p.marked = false);
         markHistory = [];
-        logAction("Game board reset.");
         redraw();
       }
     }
