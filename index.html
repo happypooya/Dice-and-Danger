@@ -1136,11 +1136,11 @@
     });
 
     img.onload = () => {
-      syncCanvasSize();
-      poolDice = [0,1,2,3,4].map(id => ({ id: id, val: 6 }));
-      renderDiceTray(poolDice, false);
-      redraw();
-    };
+  syncCanvasSize();
+  poolDice = []; // Starts empty!
+  renderDiceTray(poolDice, false);
+  redraw();
+};
 
     window.addEventListener('resize', () => { syncCanvasSize(); redraw(); });
   </script>
