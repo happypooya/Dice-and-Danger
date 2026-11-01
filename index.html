@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Dungeons, Dice & Danger - Game Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -14,7 +14,32 @@
       flex-direction: column;
       align-items: center;
       padding: 12px;
+      min-height: 100vh;
     }
+
+    /* Rotation Notice for Mobile/Tablet Portrait */
+    #rotate-notice {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(9, 9, 11, 0.98);
+      z-index: 10000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    .rotate-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: rotatePulse 2s infinite ease-in-out;
+    }
+    @keyframes rotatePulse {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(90deg) scale(1.1); }
+    }
+
     header {
       width: 100%;
       max-width: 1280px;
@@ -25,6 +50,14 @@
       padding: 10px 18px;
       border-radius: 8px;
       margin-bottom: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .header-controls {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
     }
     .version-tag {
       font-size: 11px;
@@ -74,6 +107,7 @@
       width: 100%;
       height: 100%;
       cursor: pointer;
+      touch-action: manipulation;
     }
     .panel {
       width: 320px;
@@ -83,6 +117,7 @@
       display: flex;
       flex-direction: column;
       gap: 14px;
+      flex-shrink: 0;
     }
 
     /* Tumbling Dice Styles */
@@ -269,9 +304,58 @@
       transform: scale(1.05);
       background: linear-gradient(135deg, #1d4ed8, #1e40af);
     }
+
+    /* 📱 Mobile & Tablet Responsive Media Queries */
+    @media (max-width: 1024px) {
+      body { padding: 6px; }
+      header {
+        padding: 8px 12px;
+        margin-bottom: 6px;
+      }
+      header h2 { font-size: 16px; }
+      .header-controls button {
+        padding: 6px 10px;
+        font-size: 12px;
+        border-radius: 20px; /* Subtle pill buttons */
+      }
+
+      /* Hide Calibration Button on Mobile/Tablet */
+      #btn-mode { display: none !important; }
+
+      .main-layout { gap: 10px; }
+      .panel {
+        width: 260px;
+        padding: 12px;
+        gap: 10px;
+      }
+      .die {
+        width: 38px;
+        height: 38px;
+      }
+      .pip-grid {
+        width: 30px;
+        height: 30px;
+      }
+      .pip, .pip-empty {
+        width: 6px;
+        height: 6px;
+      }
+    }
+
+    /* Detect Portrait Mode on Mobile/Tablet */
+    @media (max-width: 1024px) and (orientation: portrait) {
+      #rotate-notice { display: flex; }
+    }
   </style>
 </head>
 <body>
+
+  <!-- Mobile Portrait Rotation Notice -->
+  <div id="rotate-notice">
+    <div class="rotate-icon">🔄</div>
+    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Please Rotate Your Device</h2>
+    <p style="font-size: 14px; color: #a1a1aa; max-width: 280px;">This game is designed for landscape mode. Rotate your tablet or phone sideways to continue!</p>
+  </div>
 
   <!-- Intro Showcase Modal -->
   <div id="intro-modal">
@@ -285,8 +369,8 @@
   </div>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.5.0</span></h2>
-    <div>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.5.5</span></h2>
+    <div class="header-controls">
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
       <button id="btn-eraser" onclick="toggleEraserMode()" style="background: #475569;">🔒 Eraser: OFF</button>
@@ -337,7 +421,6 @@
 
     let poolDice = [];
 
-    // Showcase Monster List
     const showcaseMonsters = [
       {
         name: "Purple Pup",
@@ -559,7 +642,6 @@
       { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786 }
     ];
 
-    // Dynamic Bottom Gem Tracker Grid
     const gemGridPoints = [];
     const g1 = { x: 0.3241, y: 0.8785 };
     const stepX = (0.6734 - 0.3241) / 14;
@@ -1293,10 +1375,10 @@
 
     img.onload = () => {
       syncCanvasSize();
-      poolDice = []; // Empty start state!
+      poolDice = [];
       renderDiceTray(poolDice, false);
       redraw();
-      startIntroShowcase(); // Launch intro modal on page load
+      startIntroShowcase();
     };
 
     window.addEventListener('resize', () => { syncCanvasSize(); redraw(); });
