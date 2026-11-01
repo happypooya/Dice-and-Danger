@@ -157,7 +157,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.3</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.4</span></h2>
     <div>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
@@ -361,10 +361,11 @@
       { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786 }
     ];
 
+    // Calculated Dynamic Gem Grid (Using gem_1: 0.3241, gem_2: 0.3481, gem_15: 0.6734)
     const gemGridPoints = [];
-    const g1 = { x: 0.3241, y: 0.8793 };
-    const stepX = 0.0240;
-    const rowY = [0.8793, 0.9148, 0.9524];
+    const g1 = { x: 0.3241, y: 0.8785 };
+    const stepX = (0.6734 - 0.3241) / 14; // ~0.02495 per column
+    const rowY = [0.8785, 0.9148, 0.9524];
 
     let gemCounter = 1;
     for (let r = 0; r < 3; r++) {
@@ -450,7 +451,6 @@
       return label.toLowerCase().startsWith('gem_') && num >= 1 && num <= 45;
     }
 
-    // Exclude HP boxes from general bookkeeping so they strictly track monster health
     function isMonsterHpBox(label) {
       const l = label.toLowerCase();
       const isMonsterName = l.includes('pup') || l.includes('growler') || l.includes('hare') || l.includes('wolf') || l.includes('hound') || l.includes('bearpion') || l.includes('boss');
@@ -544,19 +544,6 @@
         return openFist;
       }
       return null;
-    }
-
-    function addGemsToTracker(count) {
-      const added = [];
-      for (let i = 1; i <= 45; i++) {
-        if (added.length >= count) break;
-        const gem = points.find(p => p.label === `gem_${i}`);
-        if (gem && !gem.marked) {
-          gem.marked = true;
-          added.push(gem);
-        }
-      }
-      return added;
     }
 
     function showBannerNotification(text) {
@@ -768,7 +755,6 @@
 
           if (lbl.includes('reward')) {
             pt.state = (pt.state + 1) % 3;
-            let addedGems = [];
 
             if (pt.state === 1) {
               let prefix = lbl.substring(0, lbl.indexOf('_reward'));
@@ -776,18 +762,17 @@
               if (prefix === 'white-wolf') prefix = 'white_wolf';
 
               const gemsCount = monsterGemRewards[prefix] ? monsterGemRewards[prefix][1] : 3;
-              addedGems = addGemsToTracker(gemsCount);
 
               if (prefix === 'beefy_bearpion_boss') {
-                showBannerNotification("👑 Boss Reward Claimed! 6 Gems added. (Other players take 2 Life Damage)");
+                showBannerNotification(`👑 Boss Reward Claimed! Mark ${gemsCount} Gems on your score tracker. (Other players take 2 Life Damage)`);
               } else {
-                showBannerNotification(`🏆 ${prefix.replace(/_/g, ' ')} Reward Claimed! ${gemsCount} Gems added.`);
+                showBannerNotification(`🏆 ${prefix.replace(/_/g, ' ')} 1st Reward Claimed! Mark ${gemsCount} Gems on your score tracker.`);
               }
             } else if (pt.state === 2) {
               showBannerNotification(`❌ 1st Reward marked as claimed by another player.`);
             }
 
-            markHistory.push({ pt: pt, consumedDice: null, linkedPts: addedGems, isRewardState: true });
+            markHistory.push({ pt: pt, consumedDice: null, linkedPts: [], isRewardState: true });
             redraw();
             return;
           }
@@ -822,7 +807,6 @@
                 const consumed = consumeDiceForSum(match.sum, false, false);
                 if (consumed) {
                   hpBox.marked = true;
-                  let addedGems = [];
 
                   const nextHp = getNextUnmarkedMonsterBox(prefix);
                   if (!nextHp) {
@@ -831,16 +815,14 @@
                     if (r1st && r1st.state === 0) {
                       r1st.state = 1;
                       const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][1] : 3;
-                      addedGems = addGemsToTracker(gemVal);
-                      showBannerNotification(`🎉 Defeated ${prefix.replace(/_/g, ' ')}! Claimed 1st Reward (${gemVal} Gems).`);
+                      showBannerNotification(`🎉 Defeated ${prefix.replace(/_/g, ' ')}! Claimed 1st Reward: Mark ${gemVal} Gems on your score tracker.`);
                     } else {
                       const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][2] : 1;
-                      addedGems = addGemsToTracker(gemVal);
-                      showBannerNotification(`⚔️ Defeated ${prefix.replace(/_/g, ' ')} (2nd Slayer)! Claimed ${gemVal} Gems.`);
+                      showBannerNotification(`⚔️ Defeated ${prefix.replace(/_/g, ' ')} (2nd Slayer)! Mark ${gemVal} Gem(s) on your score tracker.`);
                     }
                   }
 
-                  markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPts: addedGems });
+                  markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPts: [] });
                 }
               }
             }
@@ -860,10 +842,8 @@
                   if (autoFist) linkedPts.push(autoFist);
                 }
 
-                if (lbl.startsWith('gem_')) {
-                  const added = addGemsToTracker(1);
-                  linkedPts.push(...added);
-                  showBannerNotification("💎 Map Gem collected! 1 Gem added to tracker.");
+                if (lbl.startsWith('gem_') && !isBottomGemGridPoint(lbl)) {
+                  showBannerNotification("💎 Map Gem space collected! Mark 1 Gem on your score tracker.");
                 }
 
                 if (lbl.startsWith('gold_')) {
