@@ -531,21 +531,31 @@
       return `<div class="pip-grid">${gridContent}</div>`;
     }
 
-    function renderDiceTray(diceList, animating = false) {
-      const tray = document.getElementById('diceTray');
-      tray.innerHTML = diceList.map((d, i) => {
-        const isBlack = (d.id === 4);
-        const bgClass = isBlack ? 'die black' : 'die';
-        const animClass = animating ? 'rolling-tumble' : '';
-        const delayStyle = `animation-delay: ${i * 0.08}s;`;
+     function renderDiceTray(diceList, animating = false) {
+  const tray = document.getElementById('diceTray');
+  if (!diceList || diceList.length === 0) {
+    // Blank placeholder slots before first roll
+    tray.innerHTML = [0, 1, 2, 3, 4].map(id => `
+      <div class="${id === 4 ? 'die black' : 'die'}" style="opacity:0.4;">
+        <span style="font-size:20px; color:${id === 4 ? '#64748b' : '#94a3b8'};">-</span>
+      </div>
+    `).join('');
+    return;
+  }
 
-        return `
-          <div class="${bgClass} ${animClass}" style="${delayStyle}">
-            ${getPipLayoutHtml(d.val, isBlack)}
-          </div>
-        `;
-      }).join('');
-    }
+  tray.innerHTML = diceList.map((d, i) => {
+    const isBlack = (d.id === 4);
+    const bgClass = isBlack ? 'die black' : 'die';
+    const animClass = animating ? 'rolling-tumble' : '';
+    const delayStyle = `animation-delay: ${i * 0.08}s;`;
+
+    return `
+      <div class="${bgClass} ${animClass}" style="${delayStyle}">
+        ${getPipLayoutHtml(d.val, isBlack)}
+      </div>
+    `;
+  }).join('');
+}
 
     function getValidPairs(diceArr) {
       const pairs = [];
