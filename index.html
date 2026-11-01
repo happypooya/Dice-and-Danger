@@ -144,7 +144,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.2.4</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.3.0</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -305,7 +305,33 @@
       { "label": "Grey_hound_2", "x": 0.237, "y": 0.3524 },
       { "label": "Grey_hound_3", "x": 0.237, "y": 0.3759 },
       { "label": "Grey_hound_4", "x": 0.237, "y": 0.3962 },
-      { "label": "fist_double_10", "x": 0.3874, "y": 0.0584 }
+      { "label": "fist_double_10", "x": 0.3874, "y": 0.0584 },
+      { "label": "perk_torch_activator", "x": 0.9022, "y": 0.3149 },
+      { "label": "perk_torch_1", "x": 0.9096, "y": 0.3837 },
+      { "label": "perk_torch_2", "x": 0.9414, "y": 0.3806 },
+      { "label": "black_dice_1", "x": 0.8927, "y": 0.5291 },
+      { "label": "black_dice_2", "x": 0.9234, "y": 0.526 },
+      { "label": "black_dice_3", "x": 0.9552, "y": 0.5291 },
+      { "label": "black_dice_free_1", "x": 0.8906, "y": 0.5995 },
+      { "label": "black_dice_free_2", "x": 0.9245, "y": 0.5979 },
+      { "label": "black_dice_free_3", "x": 0.9584, "y": 0.5995 },
+      { "label": "life_point_1", "x": 0.8408, "y": 0.0944 },
+      { "label": "life_point_2", "x": 0.8408, "y": 0.135 },
+      { "label": "life_point_3", "x": 0.8408, "y": 0.1898 },
+      { "label": "life_point_4", "x": 0.8408, "y": 0.2398 },
+      { "label": "life_point_5", "x": 0.8408, "y": 0.293 },
+      { "label": "life_point_6", "x": 0.8408, "y": 0.343 },
+      { "label": "life_point_7", "x": 0.8397, "y": 0.3915 },
+      { "label": "life_point_8", "x": 0.8408, "y": 0.4462 },
+      { "label": "life_point_9", "x": 0.8418, "y": 0.4916 },
+      { "label": "life_point_final_death", "x": 0.8408, "y": 0.5432 },
+      { "label": "fist_1", "x": 0.0622, "y": 0.8832 },
+      { "label": "fist_2", "x": 0.0887, "y": 0.8816 },
+      { "label": "fist_3", "x": 0.1141, "y": 0.8832 },
+      { "label": "fist_4", "x": 0.0738, "y": 0.9238 },
+      { "label": "fist_final", "x": 0.1003, "y": 0.9207 },
+      { "label": "gem_1", "x": 0.3241, "y": 0.8793 },
+      { "label": "gem_2", "x": 0.3475, "y": 0.8809 }
     ];
 
     points.forEach(p => p.marked = false);
@@ -333,6 +359,11 @@
       }
     }
 
+    function isBookkeepingPoint(label) {
+      const l = label.toLowerCase();
+      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || l.startsWith('fist_') || l.startsWith('gem_');
+    }
+
     function getValidPairs(diceArr) {
       const pairs = [];
       for (let i = 0; i < diceArr.length; i++) {
@@ -351,14 +382,13 @@
 
     function consumeDiceForSum(sumVal, isDoubleReq) {
       const valid = getValidPairs(poolDice);
-      // Prefer white-only pairs over black-die pairs if both are available
       const match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true) && !p.usesBlack) ||
                     valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
 
       if (match) {
         const removedIds = match.diceObjects.map(d => d.id);
         poolDice = poolDice.filter(d => !removedIds.includes(d.id));
-        return match.diceObjects; // Return consumed dice for undo stack
+        return match.diceObjects;
       }
       return null;
     }
@@ -393,6 +423,29 @@
         return reqs[idx];
       }
       return reqs[reqs.length - 1];
+    }
+
+    function getHighestUnmarkedLifePoint() {
+      const lifePoints = points.filter(p => p.label.toLowerCase().startsWith('life_point'));
+      return lifePoints.find(p => !p.marked);
+    }
+
+    function triggerAutoFistMark() {
+      const openFist = points.find(p => p.label.toLowerCase().startsWith('fist_') && !p.label.toLowerCase().includes('double') && !p.marked);
+      if (openFist) {
+        openFist.marked = true;
+        markHistory.push({ pt: openFist, consumedDice: null, isAuto: true });
+      }
+    }
+
+    function checkGoldActivatorUnlock() {
+      const goldPoints = points.filter(p => p.label.toLowerCase().startsWith('gold_'));
+      const anyGoldMarked = goldPoints.some(p => p.marked);
+      
+      const perkActivator = points.find(p => p.label.toLowerCase() === 'perk_hp_activator');
+      if (perkActivator && anyGoldMarked && !perkActivator.marked) {
+        perkActivator.marked = true;
+      }
     }
 
     function toggleEditLock() {
@@ -450,11 +503,13 @@
 
         const isTargetZone = p.label.toLowerCase().endsWith('_target');
         const isHpBox = isMonsterHpBox(p.label);
+        const isBookkeeping = isBookkeepingPoint(p.label);
 
         let isHighlighted = false;
         let isBlackDieMove = false;
 
-        if (validPairs.length > 0 && !p.marked && !isHpBox) {
+        // Never highlight HP boxes or bookkeeping trackers
+        if (validPairs.length > 0 && !p.marked && !isHpBox && !isBookkeeping) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.includes('double');
 
@@ -468,7 +523,6 @@
             });
             if (matches.length > 0) {
               isHighlighted = true;
-              // If ALL valid matches require the black die, mark as black die move
               isBlackDieMove = matches.every(m => m.usesBlack);
             }
           } else {
@@ -501,9 +555,9 @@
           ctx.fill(); ctx.stroke();
         }
 
-        // Draw Damage / Marks
+        // Draw Marks
         if (p.marked) {
-          if (isHpBox) {
+          if (isHpBox || p.label.toLowerCase().startsWith('life_point')) {
             ctx.fillStyle = '#dc2626';
             ctx.fillRect(px - radius/2, py - radius/2, radius, radius);
           } else {
@@ -559,9 +613,30 @@
       } else {
         if (hitIdx >= 0) {
           const pt = points[hitIdx];
-          
-          if (pt.label.toLowerCase().endsWith('_target')) {
-            const targetIdx = pt.label.toLowerCase().indexOf('_target');
+          const lbl = pt.label.toLowerCase();
+
+          // 1. Single highest Life Point interaction (Take damage)
+          if (lbl.startsWith('life_point')) {
+            const highestOpen = getHighestUnmarkedLifePoint();
+            if (highestOpen) {
+              highestOpen.marked = true;
+              markHistory.push({ pt: highestOpen, consumedDice: null });
+            }
+            redraw();
+            return;
+          }
+
+          // 2. Free / Bookkeeping Actions (perks, free black dice, direct toggles)
+          if (isBookkeepingPoint(pt.label)) {
+            pt.marked = !pt.marked;
+            markHistory.push({ pt: pt, consumedDice: null });
+            redraw();
+            return;
+          }
+
+          // 3. Monster Portrait Target Attack
+          if (lbl.endsWith('_target')) {
+            const targetIdx = lbl.indexOf('_target');
             const prefix = pt.label.substring(0, targetIdx);
             const hpBox = getNextUnmarkedMonsterBox(prefix);
 
@@ -574,6 +649,7 @@
               }
             }
           } else {
+            // 4. Standard Board Space
             const numVal = parseInt(pt.label.replace(/\D/g, ''));
             const isDoubleReq = pt.label.includes('double');
 
@@ -582,9 +658,18 @@
               if (consumed) {
                 pt.marked = true;
                 markHistory.push({ pt: pt, consumedDice: consumed });
+
+                // Automatic Fist Tracking for fist_double spaces
+                if (pt.label.includes('fist_double')) {
+                  triggerAutoFistMark();
+                }
+
+                // Check for gold space activator unlock
+                if (pt.label.startsWith('gold_')) {
+                  checkGoldActivatorUnlock();
+                }
               }
             } else if (pt.marked) {
-              // Direct toggle off without dice stack
               pt.marked = false;
               markHistory.push({ pt: pt, consumedDice: null });
             }
@@ -612,15 +697,13 @@
       if (markHistory.length > 0) {
         const last = markHistory.pop();
         last.pt.marked = false;
-        
-        // Restore consumed dice back to pool
+
         if (last.consumedDice && last.consumedDice.length > 0) {
           last.consumedDice.forEach(d => {
             if (!poolDice.some(existing => existing.id === d.id)) {
               poolDice.push(d);
             }
           });
-          // Sort dice back by ID
           poolDice.sort((a, b) => a.id - b.id);
         }
         redraw();
