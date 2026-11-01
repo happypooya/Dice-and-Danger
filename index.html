@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Dungeons, Dice & Danger - Game Engine</title>
+  <!-- Tone.js for Sound Effects -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body {
@@ -84,28 +86,65 @@
       flex-direction: column;
       gap: 14px;
     }
+
+    /* Tumbling Dice Styles & Animations */
     .dice-group {
       display: flex;
-      gap: 6px;
+      gap: 8px;
       margin: 8px 0;
+      justify-content: center;
+      min-height: 52px;
     }
     .die {
-      width: 42px;
-      height: 42px;
-      background: #fff;
-      color: #000;
-      font-weight: bold;
-      font-size: 18px;
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
       display: flex;
       align-items: center;
       justify-content: center;
-      border-radius: 6px;
+      transition: transform 0.2s ease;
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
     }
     .die.black {
-      background: #000;
-      color: #fff;
-      border: 1px solid #444;
+      background: #0f172a;
+      border: 2px solid #334155;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
     }
+    .pip-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 38px;
+      height: 38px;
+      padding: 4px;
+      align-items: center;
+      justify-items: center;
+    }
+    .pip {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #0f172a;
+    }
+    .die.black .pip {
+      background: #f8fafc;
+    }
+    .pip-empty {
+      width: 8px;
+      height: 8px;
+    }
+
+    @keyframes tumble {
+      0% { transform: translateX(100px) rotate(45deg) scale(0.8); opacity: 0; }
+      50% { transform: translateX(-10px) rotate(-15deg) scale(1.05); opacity: 1; }
+      100% { transform: translateX(0) rotate(0deg) scale(1); opacity: 1; }
+    }
+    .rolling-tumble {
+      animation: tumble 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
     button {
       background: #2563eb;
       color: white;
@@ -157,11 +196,12 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.5</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.6</span></h2>
     <div>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
       <button id="btn-eraser" onclick="toggleEraserMode()" style="background: #475569;">🔒 Eraser: OFF</button>
+      <button id="btn-freemark" onclick="toggleFreeMarkMode()" style="background: #475569;">✏️ Free Mark: OFF</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
       <button onclick="clearMarks()" class="danger">Reset Game</button>
     </div>
@@ -184,14 +224,10 @@
     </div>
 
     <div class="panel">
-      <button onclick="rollDice()">🎲 Roll 5 Dice</button>
+      <button id="rollButton" onclick="rollDice()">🎲 Roll 5 Dice</button>
 
-      <div class="dice-group">
-        <div class="die" id="d0">-</div>
-        <div class="die" id="d1">-</div>
-        <div class="die" id="d2">-</div>
-        <div class="die" id="d3">-</div>
-        <div class="die black" id="d4">-</div>
+      <div class="dice-group" id="diceTray">
+        <!-- Rendered Dynamically with Pips & Tumble Animation -->
       </div>
 
       <hr style="border-color: #3f3f46;">
@@ -205,10 +241,41 @@
     let calibrationMode = false;
     let allowEditingPoints = true;
     let eraserMode = false;
+    let freeMarkMode = false;
+    let isRolling = false;
     let markHistory = [];
     let diceRollHistory = [];
 
     let poolDice = [];
+
+    // Tone.js Sound Setup
+    let synth, noiseSynth;
+    function initAudio() {
+      try {
+        synth = new Tone.Synth({
+          oscillator: { type: 'sine' },
+          envelope: { attack: 0.005, decay: 0.1, sustain: 0, release: 0.1 }
+        }).toDestination();
+
+        noiseSynth = new Tone.NoiseSynth({
+          noise: { type: 'brown' },
+          envelope: { attack: 0.01, decay: 0.3, sustain: 0, release: 0.2 }
+        }).toDestination();
+      } catch(e) {}
+    }
+
+    function playRollSound() {
+      try {
+        Tone.start();
+        if (noiseSynth) noiseSynth.triggerAttackRelease("0.4");
+        let now = Tone.now();
+        if (synth) {
+          synth.triggerAttackRelease("C3", "8n", now);
+          synth.triggerAttackRelease("G3", "8n", now + 0.1);
+          synth.triggerAttackRelease("E4", "4n", now + 0.25);
+        }
+      } catch(e) {}
+    }
 
     const basePoints = [
       { "label": "start_2", "x": 0.202, "y": 0.0783 },
@@ -302,9 +369,9 @@
       { "label": "white_wolf_target", "x": 0.2751, "y": 0.709 },
       { "label": "white_wolf_1", "x": 0.3217, "y": 0.6793 },
       { "label": "white_wolf_2", "x": 0.3355, "y": 0.6793 },
+      { "label": "white_wolf_3", "x": 0.3355, "y": 0.7012 },
       { "label": "white_wolf_4", "x": 0.3355, "y": 0.7262 },
       { "label": "white_wolf_final", "x": 0.3366, "y": 0.7449 },
-      { "label": "white_wolf_3", "x": 0.3355, "y": 0.7012 },
       { "label": "Beefy_bearpion_Boss_target", "x": 0.4711, "y": 0.4791 },
       { "label": "Beefy_bearpion_Boss_1", "x": 0.5654, "y": 0.4228 },
       { "label": "Beefy_bearpion_Boss_2", "x": 0.5664, "y": 0.4431 },
@@ -464,6 +531,54 @@
       return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double')) || l.includes('reward') || isBottomGemGridPoint(label);
     }
 
+    // --- Render D6 Dot Pips Layout ---
+    function getPipLayoutHtml(number, isBlack) {
+      const dot = `<div class="pip"></div>`;
+      const empty = `<div class="pip-empty"></div>`;
+
+      let gridContent = '';
+      switch(number) {
+        case 1:
+          gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`;
+          break;
+        case 2:
+          gridContent = `${dot}${empty}${empty}${empty}${empty}${empty}${empty}${empty}${dot}`;
+          break;
+        case 3:
+          gridContent = `${dot}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${dot}`;
+          break;
+        case 4:
+          gridContent = `${dot}${empty}${dot}${empty}${empty}${empty}${dot}${empty}${dot}`;
+          break;
+        case 5:
+          gridContent = `${dot}${empty}${dot}${empty}${dot}${empty}${dot}${empty}${dot}`;
+          break;
+        case 6:
+          gridContent = `${dot}${empty}${dot}${dot}${empty}${dot}${dot}${empty}${dot}`;
+          break;
+        default:
+          gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`;
+      }
+
+      return `<div class="pip-grid">${gridContent}</div>`;
+    }
+
+    function renderDiceTray(diceList, animating = false) {
+      const tray = document.getElementById('diceTray');
+      tray.innerHTML = diceList.map((d, i) => {
+        const isBlack = (d.id === 4); // Die #5 is the black die
+        const bgClass = isBlack ? 'die black' : 'die';
+        const animClass = animating ? 'rolling-tumble' : '';
+        const delayStyle = `animation-delay: ${i * 0.08}s;`;
+
+        return `
+          <div class="${bgClass} ${animClass}" style="${delayStyle}">
+            ${getPipLayoutHtml(d.val, isBlack)}
+          </div>
+        `;
+      }).join('');
+    }
+
     function getValidPairs(diceArr) {
       const pairs = [];
       for (let i = 0; i < diceArr.length; i++) {
@@ -562,6 +677,19 @@
         btn.style.background = '#e11d48';
       } else {
         btn.textContent = '🔒 Eraser: OFF';
+        btn.style.background = '#475569';
+      }
+      redraw();
+    }
+
+    function toggleFreeMarkMode() {
+      freeMarkMode = !freeMarkMode;
+      const btn = document.getElementById('btn-freemark');
+      if (freeMarkMode) {
+        btn.textContent = '✏️ Free Mark: ON';
+        btn.style.background = '#e11d48';
+      } else {
+        btn.textContent = '✏️ Free Mark: OFF';
         btn.style.background = '#475569';
       }
       redraw();
@@ -764,12 +892,22 @@
           const pt = points[hitIdx];
           const lbl = pt.label.toLowerCase();
 
+          // 1. Eraser Mode active: remove any mark
           if (pt.marked && !lbl.includes('reward')) {
             if (eraserMode) {
               pt.marked = false;
               showBannerNotification(`Erased mark from ${pt.label}`);
               redraw();
             }
+            return;
+          }
+
+          // 2. Free Mark Mode active: mark anything directly
+          if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
+            pt.marked = true;
+            markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+            showBannerNotification(`Manually marked ${pt.label}`);
+            redraw();
             return;
           }
 
@@ -880,29 +1018,44 @@
     });
 
     function rollDice() {
+      if (isRolling) return;
+      isRolling = true;
+
+      const btn = document.getElementById('rollButton');
+      btn.disabled = true;
+
       if (poolDice.length > 0) {
         diceRollHistory.push([...poolDice]);
       }
 
-      poolDice = [0,1,2,3,4].map(id => ({
+      playRollSound();
+
+      // Show intermediate tumbling dice
+      const interimValues = [0,1,2,3,4].map(id => ({
         id: id,
         val: Math.floor(Math.random() * 6) + 1
       }));
+      renderDiceTray(interimValues, true);
 
-      poolDice.forEach((d, i) => {
-        document.getElementById(`d${i}`).textContent = d.val;
-      });
+      setTimeout(() => {
+        poolDice = [0,1,2,3,4].map(id => ({
+          id: id,
+          val: Math.floor(Math.random() * 6) + 1
+        }));
 
-      document.getElementById('reward-banner').style.display = 'none';
-      redraw();
+        renderDiceTray(poolDice, false);
+
+        isRolling = false;
+        btn.disabled = false;
+        document.getElementById('reward-banner').style.display = 'none';
+        redraw();
+      }, 700);
     }
 
     function undoDiceRoll() {
       if (diceRollHistory.length > 0) {
         poolDice = diceRollHistory.pop();
-        poolDice.forEach((d, i) => {
-          document.getElementById(`d${i}`).textContent = d.val;
-        });
+        renderDiceTray(poolDice, false);
         redraw();
       }
     }
@@ -958,7 +1111,21 @@
       alert("Updated JSON dataset copied to clipboard!");
     }
 
-    img.onload = () => { syncCanvasSize(); redraw(); };
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON') {
+        e.preventDefault();
+        rollDice();
+      }
+    });
+
+    img.onload = () => {
+      syncCanvasSize();
+      initAudio();
+      poolDice = [0,1,2,3,4].map(id => ({ id: id, val: 6 }));
+      renderDiceTray(poolDice, false);
+      redraw();
+    };
+
     window.addEventListener('resize', () => { syncCanvasSize(); redraw(); });
   </script>
 </body>
