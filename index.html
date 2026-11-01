@@ -157,7 +157,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.1</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.2</span></h2>
     <div>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
@@ -206,7 +206,6 @@
     let markHistory = [];
     let diceRollHistory = [];
 
-    // Active dice state
     let poolDice = [];
 
     const basePoints = [
@@ -228,12 +227,12 @@
       { "label": "path_6", "x": 0.482, "y": 0.306 },
       { "label": "path_8", "x": 0.5289, "y": 0.261 },
       { "label": "path_7", "x": 0.6009, "y": 0.3322 },
-      { "label": "active_5", "x": 0.3825, "y": 0.515 },
-      { "label": "active_3", "x": 0.3447, "y": 0.2223 },
-      { "label": "active_3", "x": 0.643, "y": 0.1242 },
-      { "label": "active_9", "x": 0.668, "y": 0.2322 },
-      { "label": "active_6", "x": 0.1294, "y": 0.3692 },
-      { "label": "active_10", "x": 0.1996, "y": 0.2782 },
+      { "label": "boss_unlock_5", "x": 0.3825, "y": 0.515 },
+      { "label": "purple_pup_unlock_3", "x": 0.3447, "y": 0.2223 },
+      { "label": "green_growler_unlock_3", "x": 0.643, "y": 0.1242 },
+      { "label": "green_growler_unlock_9", "x": 0.668, "y": 0.2322 },
+      { "label": "grey_hound_unlock_6", "x": 0.1294, "y": 0.3692 },
+      { "label": "grey_hound_unlock_10", "x": 0.1996, "y": 0.2782 },
       { "label": "purple_pup_1", "x": 0.3551, "y": 0.0684 },
       { "label": "purple_pup_2", "x": 0.3545, "y": 0.0882 },
       { "label": "purple_pup_3", "x": 0.3551, "y": 0.1107 },
@@ -253,16 +252,16 @@
       { "label": "double_door", "x": 0.724, "y": 0.5408 },
       { "label": "double_door", "x": 0.2441, "y": 0.5987 },
       { "label": "fist_double_2", "x": 0.7578, "y": 0.7034 },
-      { "label": "active_fist_double_8", "x": 0.5248, "y": 0.6315 },
+      { "label": "boss_unlock_fist_double_8", "x": 0.5248, "y": 0.6315 },
       { "label": "fist_double_12", "x": 0.4877, "y": 0.1217 },
       { "label": "fist_double_6", "x": 0.153, "y": 0.6331 },
       { "label": "fist_double_4", "x": 0.1053, "y": 0.4313 },
       { "label": "double_door", "x": 0.2504, "y": 0.2546 },
-      { "label": "active_8", "x": 0.3362, "y": 0.6268 },
-      { "label": "active_3", "x": 0.4093, "y": 0.3672 },
-      { "label": "active_11", "x": 0.5121, "y": 0.3656 },
-      { "label": "active_4", "x": 0.6191, "y": 0.5439 },
-      { "label": "active_4", "x": 0.2473, "y": 0.1248 },
+      { "label": "white_wolf_unlock_8", "x": 0.3362, "y": 0.6268 },
+      { "label": "boss_unlock_3", "x": 0.4093, "y": 0.3672 },
+      { "label": "boss_unlock_11", "x": 0.5121, "y": 0.3656 },
+      { "label": "boss_unlock_4", "x": 0.6191, "y": 0.5439 },
+      { "label": "purple_pup_unlock_4", "x": 0.2473, "y": 0.1248 },
       { "label": "gem_2", "x": 0.6487, "y": 0.3625 },
       { "label": "gem_12", "x": 0.7218, "y": 0.472 },
       { "label": "gem_2", "x": 0.1996, "y": 0.6315 },
@@ -280,7 +279,7 @@
       { "label": "path_7", "x": 0.6646, "y": 0.5893 },
       { "label": "path_9", "x": 0.7081, "y": 0.608 },
       { "label": "path_8", "x": 0.7165, "y": 0.6737 },
-      { "label": "active_5", "x": 0.2282, "y": 0.7285 },
+      { "label": "white_wolf_unlock_5", "x": 0.2282, "y": 0.7285 },
       { "label": "Green_growler_1", "x": 0.635, "y": 0.1748 },
       { "label": "Green_growler_2", "x": 0.635, "y": 0.1967 },
       { "label": "Green_growler_3", "x": 0.635, "y": 0.2202 },
@@ -362,11 +361,10 @@
       { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786 }
     ];
 
-    // Perfectly Aligned Dynamic 3x15 Gem Grid (gem_1 to gem_45)
     const gemGridPoints = [];
     const g1 = { x: 0.3241, y: 0.8793 };
-    const stepX = 0.0240; // Derived uniform X step from gem 1-4 calibration
-    const rowY = [0.8793, 0.9148, 0.9524]; // Standardized row Y heights
+    const stepX = 0.0240;
+    const rowY = [0.8793, 0.9148, 0.9524];
 
     let gemCounter = 1;
     for (let r = 0; r < 3; r++) {
@@ -383,21 +381,50 @@
     const points = [...basePoints, ...gemGridPoints];
     points.forEach(p => {
       p.marked = false;
-      p.state = 0; // 0: normal, 1: claimed (green check), 2: crossed out (red X)
+      p.state = 0;
     });
 
     const img = document.getElementById('board-img');
     const canvas = document.getElementById('overlay-canvas');
     const ctx = canvas.getContext('2d');
 
-    const monsterHpRequirements = {
-      purple_pup: [3, 4, 11, 11],
-      green_growler: [3, 5, 8, 11],
-      grey_hound: [3, 8, 10, 10],
-      white_wolf: [4, 5, 8, 8],
-      primal_hare: [2, 12],
-      punk_hare: [3, 11],
-      beefy_bearpion_boss: [3, 4, 5, 8, 11]
+    // Annoyed Animals Sheet Monster Definitions
+    const monsterRules = {
+      purple_pup: {
+        base: [11],
+        locked: { 3: "purple_pup_unlock_3", 4: "purple_pup_unlock_4" }
+      },
+      green_growler: {
+        base: [5],
+        locked: { 3: "green_growler_unlock_3", 9: "green_growler_unlock_9" }
+      },
+      grey_hound: {
+        base: [8],
+        locked: { 6: "grey_hound_unlock_6", 10: "grey_hound_unlock_10" }
+      },
+      white_wolf: {
+        base: [4],
+        locked: { 5: "white_wolf_unlock_5", 8: "white_wolf_unlock_8" }
+      },
+      primal_hare: {
+        base: [2, 12],
+        locked: {}
+      },
+      punk_hare: {
+        base: [3, 11],
+        locked: {}
+      },
+      beefy_bearpion_boss: {
+        base: [],
+        locked: { 
+          3: "boss_unlock_3", 
+          4: "boss_unlock_4", 
+          5: "boss_unlock_5", 
+          8: "boss_unlock_8", 
+          8: "boss_unlock_fist_double_8", 
+          11: "boss_unlock_11" 
+        }
+      }
     };
 
     const monsterGemRewards = {
@@ -419,7 +446,6 @@
       }
     }
 
-    // Exclude bottom tracker gems from interactive moves or dice highlights
     function isBottomGemGridPoint(label) {
       const num = parseInt(label.replace(/\D/g, ''));
       return label.toLowerCase().startsWith('gem_') && num >= 1 && num <= 45;
@@ -491,19 +517,19 @@
       return hpPoints.find(p => !p.marked);
     }
 
-    function getRequiredSumForHpBox(prefix, hpBoxLabel) {
-      const targetPrefix = prefix.toLowerCase();
-      const reqs = monsterHpRequirements[targetPrefix];
-      if (!reqs) return parseInt(hpBoxLabel.replace(/\D/g, ''));
+    function getActiveNumbersForMonster(prefix) {
+      const rule = monsterRules[prefix];
+      if (!rule) return [];
 
-      const hpPoints = points.filter(p => {
-        const lbl = p.label.toLowerCase();
-        return lbl.startsWith(targetPrefix) && !lbl.endsWith('_target') && !lbl.includes('reward');
-      });
-
-      const idx = hpPoints.findIndex(p => p.label === hpBoxLabel);
-      if (idx >= 0 && idx < reqs.length) return reqs[idx];
-      return reqs[reqs.length - 1];
+      const activeNums = [...rule.base];
+      for (const [numStr, unlockLabel] of Object.entries(rule.locked)) {
+        const num = parseInt(numStr);
+        const unlockPoint = points.find(p => p.label.toLowerCase() === unlockLabel.toLowerCase());
+        if (unlockPoint && unlockPoint.marked) {
+          if (!activeNums.includes(num)) activeNums.push(num);
+        }
+      }
+      return activeNums;
     }
 
     function getHighestUnmarkedLifePoint() {
@@ -614,7 +640,6 @@
         let isHighlighted = false;
         let isBlackDieMove = false;
 
-        // Strictly ignore bottom gem grid and completed points from highlights
         if (validPairs.length > 0 && !p.marked && !isHpBox && !isBookkeeping) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.toLowerCase().includes('double');
@@ -635,13 +660,12 @@
               isBlackDieMove = matches.every(m => m.usesBlack);
             }
           } else {
-            // Robust isolated Monster Target check
             const prefix = getMonsterPrefixFromTarget(p.label);
             if (prefix) {
               const nextHp = getNextUnmarkedMonsterBox(prefix);
               if (nextHp) {
-                const reqSum = getRequiredSumForHpBox(prefix, nextHp.label);
-                const matches = validPairs.filter(pair => pair.sum === reqSum);
+                const activeNums = getActiveNumbersForMonster(prefix);
+                const matches = validPairs.filter(pair => activeNums.includes(pair.sum));
                 if (matches.length > 0) {
                   isHighlighted = true;
                   isBlackDieMove = matches.every(m => m.usesBlack);
@@ -665,7 +689,6 @@
           ctx.fill(); ctx.stroke();
         }
 
-        // Draw 3-State Monster Rewards
         if (p.label.toLowerCase().includes('reward')) {
           if (p.state === 1) {
             drawGreenCheckmark(px, py, radius);
@@ -681,7 +704,6 @@
           }
         }
 
-        // Standard Marks
         if (p.marked) {
           if (isHpBox || p.label.toLowerCase().startsWith('life_point')) {
             ctx.fillStyle = '#dc2626';
@@ -696,7 +718,6 @@
           }
         }
 
-        // Calibration Overlay
         if (calibrationMode) {
           ctx.fillStyle = 'rgba(59, 130, 246, 0.6)';
           ctx.strokeStyle = '#1d4ed8';
@@ -741,17 +762,15 @@
           const pt = points[hitIdx];
           const lbl = pt.label.toLowerCase();
 
-          // Prevent direct un-marking by misclicking already marked spaces
           if (pt.marked && !isBookkeepingPoint(pt.label) && !lbl.includes('reward')) {
             return;
           }
 
-          // 1. Monster Reward 3-State Toggle
           if (lbl.includes('reward')) {
             pt.state = (pt.state + 1) % 3;
             let addedGems = [];
 
-            if (pt.state === 1) { // Claimed
+            if (pt.state === 1) {
               let prefix = lbl.substring(0, lbl.indexOf('_reward'));
               if (prefix === 'boss') prefix = 'beefy_bearpion_boss';
               if (prefix === 'white-wolf') prefix = 'white_wolf';
@@ -773,7 +792,6 @@
             return;
           }
 
-          // 2. Single highest Life Point interaction
           if (lbl.startsWith('life_point')) {
             const highestOpen = getHighestUnmarkedLifePoint();
             if (highestOpen) {
@@ -784,7 +802,6 @@
             return;
           }
 
-          // 3. Bookkeeping Actions (perks, free black dice, bottom gem tracker)
           if (isBookkeepingPoint(pt.label)) {
             pt.marked = !pt.marked;
             markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
@@ -792,40 +809,42 @@
             return;
           }
 
-          // 4. Monster Target Attack
           if (lbl.endsWith('_target')) {
             const prefix = getMonsterPrefixFromTarget(pt.label);
             const hpBox = getNextUnmarkedMonsterBox(prefix);
 
             if (hpBox) {
-              const reqSum = getRequiredSumForHpBox(prefix, hpBox.label);
-              const consumed = consumeDiceForSum(reqSum, false, false);
-              if (consumed) {
-                hpBox.marked = true;
-                let addedGems = [];
+              const activeNums = getActiveNumbersForMonster(prefix);
+              const validPairs = getValidPairs(poolDice);
+              const match = validPairs.find(p => activeNums.includes(p.sum));
 
-                // Check if this was lethal (final HP box)
-                const nextHp = getNextUnmarkedMonsterBox(prefix);
-                if (!nextHp) { // Monster Slain!
-                  const r1st = points.find(p => p.label.toLowerCase().includes(prefix) && p.label.toLowerCase().endsWith('_reward_1st'));
-                  
-                  if (r1st && r1st.state === 0) { // 1st Slay
-                    r1st.state = 1;
-                    const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][1] : 3;
-                    addedGems = addGemsToTracker(gemVal);
-                    showBannerNotification(`🎉 Defeated ${prefix.replace(/_/g, ' ')}! Claimed 1st Reward (${gemVal} Gems).`);
-                  } else { // 2nd Slayer
-                    const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][2] : 1;
-                    addedGems = addGemsToTracker(gemVal);
-                    showBannerNotification(`⚔️ Defeated ${prefix.replace(/_/g, ' ')} (2nd Slayer)! Claimed ${gemVal} Gems.`);
+              if (match) {
+                const consumed = consumeDiceForSum(match.sum, false, false);
+                if (consumed) {
+                  hpBox.marked = true;
+                  let addedGems = [];
+
+                  const nextHp = getNextUnmarkedMonsterBox(prefix);
+                  if (!nextHp) {
+                    const r1st = points.find(p => p.label.toLowerCase().includes(prefix) && p.label.toLowerCase().endsWith('_reward_1st'));
+                    
+                    if (r1st && r1st.state === 0) {
+                      r1st.state = 1;
+                      const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][1] : 3;
+                      addedGems = addGemsToTracker(gemVal);
+                      showBannerNotification(`🎉 Defeated ${prefix.replace(/_/g, ' ')}! Claimed 1st Reward (${gemVal} Gems).`);
+                    } else {
+                      const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][2] : 1;
+                      addedGems = addGemsToTracker(gemVal);
+                      showBannerNotification(`⚔️ Defeated ${prefix.replace(/_/g, ' ')} (2nd Slayer)! Claimed ${gemVal} Gems.`);
+                    }
                   }
-                }
 
-                markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPts: addedGems });
+                  markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPts: addedGems });
+                }
               }
             }
           } else {
-            // 5. Standard Board Space (including Map Gems & Double Doors)
             const numVal = parseInt(pt.label.replace(/\D/g, ''));
             const isDoubleReq = lbl.includes('double');
             const isDoubleDoor = lbl === 'double_door';
@@ -836,20 +855,17 @@
                 pt.marked = true;
                 const linkedPts = [];
 
-                // Auto Fist Tracking
                 if (lbl.includes('fist_double')) {
                   const autoFist = triggerAutoFistMark();
                   if (autoFist) linkedPts.push(autoFist);
                 }
 
-                // Map Gem Space Pickup
                 if (lbl.startsWith('gem_')) {
                   const added = addGemsToTracker(1);
                   linkedPts.push(...added);
                   showBannerNotification("💎 Map Gem collected! 1 Gem added to tracker.");
                 }
 
-                // Gold Space Banner Notification
                 if (lbl.startsWith('gold_')) {
                   showBannerNotification("🎁 Gold space unlocked! Now you can choose one of the rewards.");
                 }
@@ -896,7 +912,7 @@
         const last = markHistory.pop();
 
         if (last.isRewardState) {
-          last.pt.state = (last.pt.state + 2) % 3; // Step back 1 state
+          last.pt.state = (last.pt.state + 2) % 3;
         } else {
           last.pt.marked = false;
         }
