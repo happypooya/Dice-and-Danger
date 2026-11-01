@@ -157,7 +157,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.2</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.3</span></h2>
     <div>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
@@ -388,7 +388,6 @@
     const canvas = document.getElementById('overlay-canvas');
     const ctx = canvas.getContext('2d');
 
-    // Annoyed Animals Sheet Monster Definitions
     const monsterRules = {
       purple_pup: {
         base: [11],
@@ -451,6 +450,13 @@
       return label.toLowerCase().startsWith('gem_') && num >= 1 && num <= 45;
     }
 
+    // Exclude HP boxes from general bookkeeping so they strictly track monster health
+    function isMonsterHpBox(label) {
+      const l = label.toLowerCase();
+      const isMonsterName = l.includes('pup') || l.includes('growler') || l.includes('hare') || l.includes('wolf') || l.includes('hound') || l.includes('bearpion') || l.includes('boss');
+      return isMonsterName && !l.endsWith('_target') && !l.includes('reward') && !l.includes('unlock');
+    }
+
     function isBookkeepingPoint(label) {
       const l = label.toLowerCase();
       return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double')) || l.includes('reward') || isBottomGemGridPoint(label);
@@ -490,12 +496,6 @@
       return null;
     }
 
-    function isMonsterHpBox(label) {
-      const l = label.toLowerCase();
-      const isMonsterName = l.includes('pup') || l.includes('growler') || l.includes('hare') || l.includes('wolf') || l.includes('hound') || l.includes('bearpion') || l.includes('boss');
-      return isMonsterName && !l.endsWith('_target') && !l.includes('reward');
-    }
-
     function getMonsterPrefixFromTarget(targetLabel) {
       const l = targetLabel.toLowerCase();
       if (l.startsWith('purple_pup')) return 'purple_pup';
@@ -512,7 +512,7 @@
       const targetPrefix = prefix.toLowerCase();
       const hpPoints = points.filter(p => {
         const lbl = p.label.toLowerCase();
-        return lbl.startsWith(targetPrefix) && !lbl.endsWith('_target') && !lbl.includes('reward');
+        return lbl.startsWith(targetPrefix) && !lbl.endsWith('_target') && !lbl.includes('reward') && !lbl.includes('unlock');
       });
       return hpPoints.find(p => !p.marked);
     }
