@@ -161,6 +161,7 @@
     <div>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
+      <button id="btn-eraser" onclick="toggleEraserMode()" style="background: #475569;">🔒 Eraser: OFF</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
       <button onclick="clearMarks()" class="danger">Reset Game</button>
     </div>
@@ -749,9 +750,14 @@
           const pt = points[hitIdx];
           const lbl = pt.label.toLowerCase();
 
-          if (pt.marked && !isBookkeepingPoint(pt.label) && !lbl.includes('reward')) {
-            return;
-          }
+         if (pt.marked && !lbl.includes('reward')) {
+  if (eraserMode) {
+    pt.marked = false;
+    showBannerNotification(`Erased mark from ${pt.label}`);
+    redraw();
+  }
+  return;
+}
 
           if (lbl.includes('reward')) {
             pt.state = (pt.state + 1) % 3;
@@ -887,34 +893,44 @@
       }
     }
 
-    function undoLastAction() {
-      if (markHistory.length > 0) {
-        const last = markHistory.pop();
+   function undoLastAction() {
+  if (markHistory.length > 0) {
+    const last = markHistory.pop();
 
-        if (last.isRewardState) {
-          last.pt.state = (last.pt.state + 2) % 3;
-        } else {
-          last.pt.marked = false;
-        }
-
-        if (last.linkedPts && last.linkedPts.length > 0) {
-          last.linkedPts.forEach(p => p.marked = false);
-        }
-
-        if (last.consumedDice && last.consumedDice.length > 0) {
-          last.consumedDice.forEach(d => {
-            if (!poolDice.some(existing => existing.id === d.id)) {
-              poolDice.push(d);
-            }
-          });
-          poolDice.sort((a, b) => a.id - b.id);
-        }
-
-        document.getElementById('reward-banner').style.display = 'none';
-        redraw();
-      }
+    if (last.isRewardState) {
+      last.pt.state = (last.pt.state + 2) % 3;
+    } else {
+      last.pt.marked = false; // Restores the gem/space if clicked by mistake
     }
 
+    if (last.linkedPts && last.linkedPts.length > 0) {
+      last.linkedPts.forEach(p => p.marked = false);
+    }
+
+    if (last.consumedDice && last.consumedDice.length > 0) {
+      last.consumedDice.forEach(d => {
+        if (!poolDice.some(existing => existing.id === d.id)) {
+          poolDice.push(d);
+        }
+      });
+      poolDice.sort((a, b) => a.id - b.id);
+    }
+
+    document.getElementById('reward-banner').style.display = 'none';
+    redraw();
+  }
+}
+function toggleEraserMode() {
+  eraserMode = !eraserMode;
+  const btn = document.getElementById('btn-eraser');
+  if (eraserMode) {
+    btn.textContent = '🔓 Eraser: ON';
+    btn.style.background = '#e11d48'; // Highlights red when active
+  } else {
+    btn.textContent = '🔒 Eraser: OFF';
+    btn.style.background = '#475569';
+  }
+}
     function toggleCalibration() {
       calibrationMode = !calibrationMode;
       document.getElementById('btn-mode').classList.toggle('active', calibrationMode);
