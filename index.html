@@ -157,7 +157,7 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.0</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.4.1</span></h2>
     <div>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
@@ -362,15 +362,11 @@
       { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786 }
     ];
 
-    // Generate dynamic 3x15 Gem Grid (45 points)
+    // Perfectly Aligned Dynamic 3x15 Gem Grid (gem_1 to gem_45)
     const gemGridPoints = [];
-    const g1 = { x: 0.3241, y: 0.8793 };  // Row 1, Col 1
-    const g2 = { x: 0.3475, y: 0.8809 };  // Row 1, Col 2
-    const g16 = { x: 0.3229, y: 0.9148 }; // Row 2, Col 1
-    const g31 = { x: 0.3229, y: 0.9524 }; // Row 3, Col 1
-
-    const stepX = g2.x - g1.x;
-    const rowY = [g1.y, g16.y, g31.y];
+    const g1 = { x: 0.3241, y: 0.8793 };
+    const stepX = 0.0240; // Derived uniform X step from gem 1-4 calibration
+    const rowY = [0.8793, 0.9148, 0.9524]; // Standardized row Y heights
 
     let gemCounter = 1;
     for (let r = 0; r < 3; r++) {
@@ -378,7 +374,7 @@
         gemGridPoints.push({
           label: `gem_${gemCounter}`,
           x: Number((g1.x + c * stepX).toFixed(4)),
-          y: Number(rowY[r].toFixed(4))
+          y: rowY[r]
         });
         gemCounter++;
       }
@@ -423,9 +419,15 @@
       }
     }
 
+    // Exclude bottom tracker gems from interactive moves or dice highlights
+    function isBottomGemGridPoint(label) {
+      const num = parseInt(label.replace(/\D/g, ''));
+      return label.toLowerCase().startsWith('gem_') && num >= 1 && num <= 45;
+    }
+
     function isBookkeepingPoint(label) {
       const l = label.toLowerCase();
-      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double')) || l.includes('reward');
+      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double')) || l.includes('reward') || isBottomGemGridPoint(label);
     }
 
     function getValidPairs(diceArr) {
@@ -466,6 +468,18 @@
       const l = label.toLowerCase();
       const isMonsterName = l.includes('pup') || l.includes('growler') || l.includes('hare') || l.includes('wolf') || l.includes('hound') || l.includes('bearpion') || l.includes('boss');
       return isMonsterName && !l.endsWith('_target') && !l.includes('reward');
+    }
+
+    function getMonsterPrefixFromTarget(targetLabel) {
+      const l = targetLabel.toLowerCase();
+      if (l.startsWith('purple_pup')) return 'purple_pup';
+      if (l.startsWith('green_growler')) return 'green_growler';
+      if (l.startsWith('grey_hound')) return 'grey_hound';
+      if (l.startsWith('white_wolf')) return 'white_wolf';
+      if (l.startsWith('primal_hare')) return 'primal_hare';
+      if (l.startsWith('punk_hare')) return 'punk_hare';
+      if (l.startsWith('beefy_bearpion')) return 'beefy_bearpion_boss';
+      return '';
     }
 
     function getNextUnmarkedMonsterBox(prefix) {
@@ -600,6 +614,7 @@
         let isHighlighted = false;
         let isBlackDieMove = false;
 
+        // Strictly ignore bottom gem grid and completed points from highlights
         if (validPairs.length > 0 && !p.marked && !isHpBox && !isBookkeeping) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
           const isDoubleReq = p.label.toLowerCase().includes('double');
@@ -620,16 +635,17 @@
               isBlackDieMove = matches.every(m => m.usesBlack);
             }
           } else {
-            const targetIdx = p.label.toLowerCase().indexOf('_target');
-            const prefix = p.label.substring(0, targetIdx);
-            const nextHp = getNextUnmarkedMonsterBox(prefix);
-
-            if (nextHp) {
-              const reqSum = getRequiredSumForHpBox(prefix, nextHp.label);
-              const matches = validPairs.filter(pair => pair.sum === reqSum);
-              if (matches.length > 0) {
-                isHighlighted = true;
-                isBlackDieMove = matches.every(m => m.usesBlack);
+            // Robust isolated Monster Target check
+            const prefix = getMonsterPrefixFromTarget(p.label);
+            if (prefix) {
+              const nextHp = getNextUnmarkedMonsterBox(prefix);
+              if (nextHp) {
+                const reqSum = getRequiredSumForHpBox(prefix, nextHp.label);
+                const matches = validPairs.filter(pair => pair.sum === reqSum);
+                if (matches.length > 0) {
+                  isHighlighted = true;
+                  isBlackDieMove = matches.every(m => m.usesBlack);
+                }
               }
             }
           }
@@ -725,6 +741,11 @@
           const pt = points[hitIdx];
           const lbl = pt.label.toLowerCase();
 
+          // Prevent direct un-marking by misclicking already marked spaces
+          if (pt.marked && !isBookkeepingPoint(pt.label) && !lbl.includes('reward')) {
+            return;
+          }
+
           // 1. Monster Reward 3-State Toggle
           if (lbl.includes('reward')) {
             pt.state = (pt.state + 1) % 3;
@@ -763,7 +784,7 @@
             return;
           }
 
-          // 3. Bookkeeping Actions (perks, free black dice, bottom gems)
+          // 3. Bookkeeping Actions (perks, free black dice, bottom gem tracker)
           if (isBookkeepingPoint(pt.label)) {
             pt.marked = !pt.marked;
             markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
@@ -773,8 +794,7 @@
 
           // 4. Monster Target Attack
           if (lbl.endsWith('_target')) {
-            const targetIdx = lbl.indexOf('_target');
-            const prefix = pt.label.substring(0, targetIdx);
+            const prefix = getMonsterPrefixFromTarget(pt.label);
             const hpBox = getNextUnmarkedMonsterBox(prefix);
 
             if (hpBox) {
@@ -836,9 +856,6 @@
 
                 markHistory.push({ pt: pt, consumedDice: consumed, linkedPts: linkedPts });
               }
-            } else if (pt.marked) {
-              pt.marked = false;
-              markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
             }
           }
         }
