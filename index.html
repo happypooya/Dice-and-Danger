@@ -33,6 +33,19 @@
       font-weight: normal;
       margin-left: 8px;
     }
+    .banner-notification {
+      width: 100%;
+      max-width: 1280px;
+      background: #eab308;
+      color: #000;
+      font-weight: 700;
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      text-align: center;
+      display: none;
+      box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+    }
     .main-layout {
       display: flex;
       gap: 16px;
@@ -144,13 +157,17 @@
 <body>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.3.0</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.3.1</span></h2>
     <div>
       <button onclick="undoMark()">↩ Undo Last Mark</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
       <button onclick="clearMarks()" class="danger">Reset Game</button>
     </div>
   </header>
+
+  <div id="reward-banner" class="banner-notification">
+    🎁 Gold space unlocked! Now you can choose one of the rewards.
+  </div>
 
   <div id="calib-banner" class="calib-banner" style="display: none;">
     <span>
@@ -359,9 +376,10 @@
       }
     }
 
+    // Gems are regular dice-consuming spaces, NOT bookkeeping!
     function isBookkeepingPoint(label) {
       const l = label.toLowerCase();
-      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || l.startsWith('fist_') || l.startsWith('gem_');
+      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double'));
     }
 
     function getValidPairs(diceArr) {
@@ -380,10 +398,17 @@
       return pairs;
     }
 
-    function consumeDiceForSum(sumVal, isDoubleReq) {
+    function consumeDiceForSum(sumVal, isDoubleReq, isDoubleDoor) {
       const valid = getValidPairs(poolDice);
-      const match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true) && !p.usesBlack) ||
-                    valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+
+      let match = null;
+      if (isDoubleDoor) {
+        // Double door accepts ANY available double pair (prefers white-only)
+        match = valid.find(p => p.isDouble && !p.usesBlack) || valid.find(p => p.isDouble);
+      } else {
+        match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true) && !p.usesBlack) ||
+                valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+      }
 
       if (match) {
         const removedIds = match.diceObjects.map(d => d.id);
@@ -434,18 +459,14 @@
       const openFist = points.find(p => p.label.toLowerCase().startsWith('fist_') && !p.label.toLowerCase().includes('double') && !p.marked);
       if (openFist) {
         openFist.marked = true;
-        markHistory.push({ pt: openFist, consumedDice: null, isAuto: true });
+        return openFist;
       }
+      return null;
     }
 
-    function checkGoldActivatorUnlock() {
-      const goldPoints = points.filter(p => p.label.toLowerCase().startsWith('gold_'));
-      const anyGoldMarked = goldPoints.some(p => p.marked);
-      
-      const perkActivator = points.find(p => p.label.toLowerCase() === 'perk_hp_activator');
-      if (perkActivator && anyGoldMarked && !perkActivator.marked) {
-        perkActivator.marked = true;
-      }
+    function showGoldBannerNotification() {
+      const banner = document.getElementById('reward-banner');
+      banner.style.display = 'block';
     }
 
     function toggleEditLock() {
@@ -511,16 +532,19 @@
         // Never highlight HP boxes or bookkeeping trackers
         if (validPairs.length > 0 && !p.marked && !isHpBox && !isBookkeeping) {
           const numVal = parseInt(p.label.replace(/\D/g, ''));
-          const isDoubleReq = p.label.includes('double');
+          const isDoubleReq = p.label.toLowerCase().includes('double');
+          const isDoubleDoor = p.label.toLowerCase() === 'double_door';
 
           if (!isTargetZone) {
             const matches = validPairs.filter(pair => {
+              if (isDoubleDoor) return pair.isDouble;
               if (numVal && pair.sum === numVal) {
                 return isDoubleReq ? pair.isDouble : true;
               }
               if (isDoubleReq && !numVal) return pair.isDouble;
               return false;
             });
+
             if (matches.length > 0) {
               isHighlighted = true;
               isBlackDieMove = matches.every(m => m.usesBlack);
@@ -615,26 +639,26 @@
           const pt = points[hitIdx];
           const lbl = pt.label.toLowerCase();
 
-          // 1. Single highest Life Point interaction (Take damage)
+          // 1. Single highest Life Point interaction
           if (lbl.startsWith('life_point')) {
             const highestOpen = getHighestUnmarkedLifePoint();
             if (highestOpen) {
               highestOpen.marked = true;
-              markHistory.push({ pt: highestOpen, consumedDice: null });
+              markHistory.push({ pt: highestOpen, consumedDice: null, linkedPt: null });
             }
             redraw();
             return;
           }
 
-          // 2. Free / Bookkeeping Actions (perks, free black dice, direct toggles)
+          // 2. Bookkeeping Actions (perks, free black dice)
           if (isBookkeepingPoint(pt.label)) {
             pt.marked = !pt.marked;
-            markHistory.push({ pt: pt, consumedDice: null });
+            markHistory.push({ pt: pt, consumedDice: null, linkedPt: null });
             redraw();
             return;
           }
 
-          // 3. Monster Portrait Target Attack
+          // 3. Monster Target Attack
           if (lbl.endsWith('_target')) {
             const targetIdx = lbl.indexOf('_target');
             const prefix = pt.label.substring(0, targetIdx);
@@ -642,36 +666,39 @@
 
             if (hpBox) {
               const reqSum = getRequiredSumForHpBox(prefix, hpBox.label);
-              const consumed = consumeDiceForSum(reqSum, false);
+              const consumed = consumeDiceForSum(reqSum, false, false);
               if (consumed) {
                 hpBox.marked = true;
-                markHistory.push({ pt: hpBox, consumedDice: consumed });
+                markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPt: null });
               }
             }
           } else {
-            // 4. Standard Board Space
+            // 4. Standard Board Space (including Gems & Double Doors)
             const numVal = parseInt(pt.label.replace(/\D/g, ''));
-            const isDoubleReq = pt.label.includes('double');
+            const isDoubleReq = lbl.includes('double');
+            const isDoubleDoor = lbl === 'double_door';
 
-            if (!pt.marked && numVal) {
-              const consumed = consumeDiceForSum(numVal, isDoubleReq);
+            if (!pt.marked && (numVal || isDoubleDoor)) {
+              const consumed = consumeDiceForSum(numVal, isDoubleReq, isDoubleDoor);
               if (consumed) {
                 pt.marked = true;
-                markHistory.push({ pt: pt, consumedDice: consumed });
 
-                // Automatic Fist Tracking for fist_double spaces
-                if (pt.label.includes('fist_double')) {
-                  triggerAutoFistMark();
+                // Automatic Fist Tracking
+                let autoFist = null;
+                if (lbl.includes('fist_double')) {
+                  autoFist = triggerAutoFistMark();
                 }
 
-                // Check for gold space activator unlock
-                if (pt.label.startsWith('gold_')) {
-                  checkGoldActivatorUnlock();
+                markHistory.push({ pt: pt, consumedDice: consumed, linkedPt: autoFist });
+
+                // Gold Space Banner Notification
+                if (lbl.startsWith('gold_')) {
+                  showGoldBannerNotification();
                 }
               }
             } else if (pt.marked) {
               pt.marked = false;
-              markHistory.push({ pt: pt, consumedDice: null });
+              markHistory.push({ pt: pt, consumedDice: null, linkedPt: null });
             }
           }
         }
@@ -690,6 +717,7 @@
       });
 
       markHistory = [];
+      document.getElementById('reward-banner').style.display = 'none';
       redraw();
     }
 
@@ -698,6 +726,12 @@
         const last = markHistory.pop();
         last.pt.marked = false;
 
+        // Undo linked fist mark if present
+        if (last.linkedPt) {
+          last.linkedPt.marked = false;
+        }
+
+        // Restore consumed dice
         if (last.consumedDice && last.consumedDice.length > 0) {
           last.consumedDice.forEach(d => {
             if (!poolDice.some(existing => existing.id === d.id)) {
@@ -706,6 +740,15 @@
           });
           poolDice.sort((a, b) => a.id - b.id);
         }
+
+        // Hide banner if undid gold space
+        if (last.pt.label.toLowerCase().startsWith('gold_')) {
+          const goldPoints = points.filter(p => p.label.toLowerCase().startsWith('gold_'));
+          if (!goldPoints.some(p => p.marked)) {
+            document.getElementById('reward-banner').style.display = 'none';
+          }
+        }
+
         redraw();
       }
     }
@@ -721,6 +764,7 @@
       if (confirm("Reset all marked spaces?")) {
         points.forEach(p => p.marked = false);
         markHistory = [];
+        document.getElementById('reward-banner').style.display = 'none';
         redraw();
       }
     }
