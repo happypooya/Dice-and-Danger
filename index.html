@@ -360,7 +360,7 @@
     <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.6.0</span></h2>
     <div class="header-controls">
       <button onclick="undoLastAction()">↩ Undo Action</button>
-      <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
+      <button onclick="undoDiceRoll()">🎲 Previous Dice Roll</button>
       <button id="btn-eraser" onclick="toggleEraserMode()" style="background: #475569;">🔒 Eraser: OFF</button>
       <button id="btn-freemark" onclick="toggleFreeMarkMode()" style="background: #475569;">✏️ Free Mark: OFF</button>
       <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
@@ -943,12 +943,12 @@
 
       let html = '';
       if (whitePairs.length > 0) {
-        html += `<div><strong>Standard (White):</strong><br>`;
+        html += `<div><strong>Using only White Dice:</strong><br>`;
         whitePairs.forEach(lbl => html += `<span class="pair-tag tag-white">${lbl}</span>`);
         html += `</div>`;
       }
       if (blackPairs.length > 0) {
-        html += `<div style="margin-top:6px;"><strong>Black Die Required:</strong><br>`;
+        html += `<div style="margin-top:6px;"><strong>Including the Black Die:</strong><br>`;
         blackPairs.forEach(lbl => html += `<span class="pair-tag tag-black">${lbl}</span>`);
         html += `</div>`;
       }
