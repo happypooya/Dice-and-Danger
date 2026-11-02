@@ -305,21 +305,16 @@
       background: linear-gradient(135deg, #1d4ed8, #1e40af);
     }
 
-    /* 📱 Mobile & Tablet Responsive Media Queries */
     @media (max-width: 1024px) {
       body { padding: 6px; }
-      header {
-        padding: 8px 12px;
-        margin-bottom: 6px;
-      }
+      header { padding: 8px 12px; margin-bottom: 6px; }
       header h2 { font-size: 16px; }
       .header-controls button {
         padding: 6px 10px;
         font-size: 12px;
-        border-radius: 20px; /* Subtle pill buttons */
+        border-radius: 20px;
       }
 
-      /* Hide Calibration Button on Mobile/Tablet */
       #btn-mode { display: none !important; }
 
       .main-layout { gap: 10px; }
@@ -332,17 +327,10 @@
         width: 38px;
         height: 38px;
       }
-      .pip-grid {
-        width: 30px;
-        height: 30px;
-      }
-      .pip, .pip-empty {
-        width: 6px;
-        height: 6px;
-      }
+      .pip-grid { width: 30px; height: 30px; }
+      .pip, .pip-empty { width: 6px; height: 6px; }
     }
 
-    /* Detect Portrait Mode on Mobile/Tablet */
     @media (max-width: 1024px) and (orientation: portrait) {
       #rotate-notice { display: flex; }
     }
@@ -369,7 +357,7 @@
   </div>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.5.5</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.6.0</span></h2>
     <div class="header-controls">
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Undo Dice Roll</button>
@@ -470,7 +458,14 @@
             card.classList.add('boss-glow');
             nameEl.style.color = '#ef4444';
             flavorEl.textContent = "⚠️ FINAL BOSS SPOTTED! Defeat the Beefy Bearpion to conquer the realm!";
-            btn.style.display = 'block';
+
+            const isMobileOrTablet = window.innerWidth <= 1024;
+            if (isMobileOrTablet) {
+              btn.style.display = 'none';
+              setTimeout(() => { closeIntroModal(); }, 1500);
+            } else {
+              btn.style.display = 'block';
+            }
           } else {
             card.classList.remove('boss-glow');
             nameEl.style.color = '#f4f4f5';
@@ -489,7 +484,7 @@
       setTimeout(() => { modal.style.display = 'none'; }, 400);
     }
 
-    const basePoints = [
+    const points = [
       { "label": "start_2", "x": 0.202, "y": 0.0783 },
       { "label": "start_9", "x": 0.2008, "y": 0.1422 },
       { "label": "start_6", "x": 0.2002, "y": 0.2133 },
@@ -639,30 +634,64 @@
       { "label": "primal_hare_reward_sub", "x": 0.45, "y": 0.7616 },
       { "label": "white_wolf_reward_1st", "x": 0.2678, "y": 0.7866 },
       { "label": "white_wolf_reward_sub", "x": 0.2912, "y": 0.785 },
-      { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786 }
+      { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786 },
+      { "label": "gem_1", "x": 0.3241, "y": 0.8785 },
+      { "label": "gem_2", "x": 0.349, "y": 0.8785 },
+      { "label": "gem_3", "x": 0.374, "y": 0.8785 },
+      { "label": "gem_4", "x": 0.399, "y": 0.8785 },
+      { "label": "gem_5", "x": 0.4239, "y": 0.8785 },
+      { "label": "gem_6", "x": 0.4488, "y": 0.8785 },
+      { "label": "gem_7", "x": 0.4738, "y": 0.8785 },
+      { "label": "gem_8", "x": 0.4988, "y": 0.8785 },
+      { "label": "gem_9", "x": 0.5237, "y": 0.8785 },
+      { "label": "gem_10", "x": 0.5486, "y": 0.8785 },
+      { "label": "gem_11", "x": 0.5736, "y": 0.8785 },
+      { "label": "gem_12", "x": 0.5985, "y": 0.8785 },
+      { "label": "gem_13", "x": 0.6235, "y": 0.8785 },
+      { "label": "gem_14", "x": 0.6484, "y": 0.8785 },
+      { "label": "gem_15", "x": 0.6734, "y": 0.8785 },
+      { "label": "gem_16", "x": 0.3241, "y": 0.9148 },
+      { "label": "gem_17", "x": 0.349, "y": 0.9148 },
+      { "label": "gem_18", "x": 0.374, "y": 0.9148 },
+      { "label": "gem_19", "x": 0.399, "y": 0.9148 },
+      { "label": "gem_20", "x": 0.4239, "y": 0.9148 },
+      { "label": "gem_21", "x": 0.4488, "y": 0.9148 },
+      { "label": "gem_22", "x": 0.4738, "y": 0.9148 },
+      { "label": "gem_23", "x": 0.4988, "y": 0.9148 },
+      { "label": "gem_24", "x": 0.5237, "y": 0.9148 },
+      { "label": "gem_25", "x": 0.5486, "y": 0.9148 },
+      { "label": "gem_26", "x": 0.5736, "y": 0.9148 },
+      { "label": "gem_27", "x": 0.5985, "y": 0.9148 },
+      { "label": "gem_28", "x": 0.6235, "y": 0.9148 },
+      { "label": "gem_29", "x": 0.6484, "y": 0.9148 },
+      { "label": "gem_30", "x": 0.6734, "y": 0.9148 },
+      { "label": "gem_31", "x": 0.3241, "y": 0.9524 },
+      { "label": "gem_32", "x": 0.349, "y": 0.9524 },
+      { "label": "gem_33", "x": 0.374, "y": 0.9524 },
+      { "label": "gem_34", "x": 0.399, "y": 0.9524 },
+      { "label": "gem_35", "x": 0.4239, "y": 0.9524 },
+      { "label": "gem_36", "x": 0.4488, "y": 0.9524 },
+      { "label": "gem_37", "x": 0.4738, "y": 0.9524 },
+      { "label": "gem_38", "x": 0.4988, "y": 0.9524 },
+      { "label": "gem_39", "x": 0.5237, "y": 0.9524 },
+      { "label": "gem_40", "x": 0.5486, "y": 0.9524 },
+      { "label": "gem_41", "x": 0.5736, "y": 0.9524 },
+      { "label": "gem_42", "x": 0.5985, "y": 0.9524 },
+      { "label": "gem_43", "x": 0.6235, "y": 0.9524 },
+      { "label": "gem_44", "x": 0.6484, "y": 0.9524 },
+      { "label": "gem_45", "x": 0.6734, "y": 0.9524 },
+      { "label": "fist_reward_first", "x": 0.0728, "y": 0.9604 },
+      { "label": "fist_reward_sub", "x": 0.1088, "y": 0.9604 },
+      { "label": "connect_reward_first", "x": 0.2116, "y": 0.9557 },
+      { "label": "connect_reward_sub", "x": 0.2497, "y": 0.9589 },
+      { "label": "life_loss_points", "x": 0.7296, "y": 0.926 },
+      { "label": "total_points", "x": 0.7974, "y": 0.9229 }
     ];
 
-    const gemGridPoints = [];
-    const g1 = { x: 0.3241, y: 0.8785 };
-    const stepX = (0.6734 - 0.3241) / 14;
-    const rowY = [0.8785, 0.9148, 0.9524];
-
-    let gemCounter = 1;
-    for (let r = 0; r < 3; r++) {
-      for (let c = 0; c < 15; c++) {
-        gemGridPoints.push({
-          label: `gem_${gemCounter}`,
-          x: Number((g1.x + c * stepX).toFixed(4)),
-          y: rowY[r]
-        });
-        gemCounter++;
-      }
-    }
-
-    const points = [...basePoints, ...gemGridPoints];
     points.forEach(p => {
       p.marked = false;
       p.state = 0;
+      p.textValue = "";
     });
 
     const img = document.getElementById('board-img');
@@ -670,30 +699,12 @@
     const ctx = canvas.getContext('2d');
 
     const monsterRules = {
-      purple_pup: {
-        base: [11],
-        locked: { 3: "purple_pup_unlock_3", 4: "purple_pup_unlock_4" }
-      },
-      green_growler: {
-        base: [5],
-        locked: { 3: "green_growler_unlock_3", 9: "green_growler_unlock_9" }
-      },
-      grey_hound: {
-        base: [8],
-        locked: { 6: "grey_hound_unlock_6", 10: "grey_hound_unlock_10" }
-      },
-      white_wolf: {
-        base: [4],
-        locked: { 5: "white_wolf_unlock_5", 8: "white_wolf_unlock_8" }
-      },
-      primal_hare: {
-        base: [2, 12],
-        locked: {}
-      },
-      punk_hare: {
-        base: [3, 11],
-        locked: {}
-      },
+      purple_pup: { base: [11], locked: { 3: "purple_pup_unlock_3", 4: "purple_pup_unlock_4" } },
+      green_growler: { base: [5], locked: { 3: "green_growler_unlock_3", 9: "green_growler_unlock_9" } },
+      grey_hound: { base: [8], locked: { 6: "grey_hound_unlock_6", 10: "grey_hound_unlock_10" } },
+      white_wolf: { base: [4], locked: { 5: "white_wolf_unlock_5", 8: "white_wolf_unlock_8" } },
+      primal_hare: { base: [2, 12], locked: {} },
+      punk_hare: { base: [3, 11], locked: {} },
       beefy_bearpion_boss: {
         base: [],
         locked: { 
@@ -707,14 +718,17 @@
       }
     };
 
-    const monsterGemRewards = {
-      purple_pup: { 1: 3, 2: 1 },
-      green_growler: { 1: 3, 2: 1 },
-      grey_hound: { 1: 3, 2: 1 },
-      white_wolf: { 1: 3, 2: 1 },
+    // Corrected Gem Reward Payouts
+    const rewardGemValues = {
+      purple_pup: { 1: 2, 2: 1 },
+      green_growler: { 1: 2, 2: 1 },
+      grey_hound: { 1: 2, 2: 1 },
+      white_wolf: { 1: 2, 2: 1 },
       primal_hare: { 1: 3, 2: 1 },
       punk_hare: { 1: 3, 2: 1 },
-      beefy_bearpion_boss: { 1: 6, 2: 3 }
+      beefy_bearpion_boss: { 1: 6, 2: 3 },
+      fist: { 1: 3, 2: 1 },
+      connect: { 1: 3, 2: 1 }
     };
 
     function syncCanvasSize() {
@@ -739,7 +753,7 @@
 
     function isBookkeepingPoint(label) {
       const l = label.toLowerCase();
-      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double')) || l.includes('reward') || isBottomGemGridPoint(label);
+      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double') && !l.includes('reward')) || l.includes('reward') || isBottomGemGridPoint(label) || l === 'life_loss_points' || l === 'total_points';
     }
 
     function getPipLayoutHtml(number, isBlack) {
@@ -748,26 +762,13 @@
 
       let gridContent = '';
       switch(number) {
-        case 1:
-          gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`;
-          break;
-        case 2:
-          gridContent = `${dot}${empty}${empty}${empty}${empty}${empty}${empty}${empty}${dot}`;
-          break;
-        case 3:
-          gridContent = `${dot}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${dot}`;
-          break;
-        case 4:
-          gridContent = `${dot}${empty}${dot}${empty}${empty}${empty}${dot}${empty}${dot}`;
-          break;
-        case 5:
-          gridContent = `${dot}${empty}${dot}${empty}${dot}${empty}${dot}${empty}${dot}`;
-          break;
-        case 6:
-          gridContent = `${dot}${empty}${dot}${dot}${empty}${dot}${dot}${empty}${dot}`;
-          break;
-        default:
-          gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`;
+        case 1: gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`; break;
+        case 2: gridContent = `${dot}${empty}${empty}${empty}${empty}${empty}${empty}${empty}${dot}`; break;
+        case 3: gridContent = `${dot}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${dot}`; break;
+        case 4: gridContent = `${dot}${empty}${dot}${empty}${empty}${empty}${dot}${empty}${dot}`; break;
+        case 5: gridContent = `${dot}${empty}${dot}${empty}${dot}${empty}${dot}${empty}${dot}`; break;
+        case 6: gridContent = `${dot}${empty}${dot}${dot}${empty}${dot}${dot}${empty}${dot}`; break;
+        default: gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`;
       }
 
       return `<div class="pip-grid">${gridContent}</div>`;
@@ -874,7 +875,7 @@
     }
 
     function triggerAutoFistMark() {
-      const openFist = points.find(p => p.label.toLowerCase().startsWith('fist_') && !p.label.toLowerCase().includes('double') && !p.marked);
+      const openFist = points.find(p => p.label.toLowerCase().startsWith('fist_') && !p.label.toLowerCase().includes('double') && !p.label.toLowerCase().includes('reward') && !p.marked);
       if (openFist) {
         openFist.marked = true;
         return openFist;
@@ -1021,6 +1022,7 @@
         const isTargetZone = p.label.toLowerCase().endsWith('_target');
         const isHpBox = isMonsterHpBox(p.label);
         const isBookkeeping = isBookkeepingPoint(p.label);
+        const isTextBox = p.label === 'life_loss_points' || p.label === 'total_points';
 
         let isHighlighted = false;
         let isBlackDieMove = false;
@@ -1089,6 +1091,15 @@
           }
         }
 
+        if (isTextBox && p.textValue !== "") {
+          ctx.fillStyle = '#dc2626';
+          ctx.font = `bold ${Math.max(12, canvas.width / 75)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.textValue, px, py);
+          return;
+        }
+
         if (p.marked) {
           if (isHpBox || p.label.toLowerCase().startsWith('life_point')) {
             ctx.fillStyle = '#dc2626';
@@ -1139,7 +1150,7 @@
         } else if (hitIdx < 0 || !allowEditingPoints) {
           const label = prompt("Enter label for new target:");
           if (label) {
-            points.push({ label: label.trim(), x: Number(clickX.toFixed(4)), y: Number(clickY.toFixed(4)), marked: false, state: 0 });
+            points.push({ label: label.trim(), x: Number(clickX.toFixed(4)), y: Number(clickY.toFixed(4)), marked: false, state: 0, textValue: "" });
           }
         }
       } else {
@@ -1147,22 +1158,30 @@
           const pt = points[hitIdx];
           const lbl = pt.label.toLowerCase();
 
-          if (pt.marked && !lbl.includes('reward')) {
-            if (eraserMode) {
-              pt.marked = false;
-              showBannerNotification(`Erased mark from ${pt.label}`);
+          if (lbl === 'life_loss_points' || lbl === 'total_points') {
+            const val = prompt(`Enter numeric value for ${lbl.replace(/_/g, ' ')}:`, pt.textValue || "0");
+            if (val !== null) {
+              pt.textValue = val.trim();
+              markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
               redraw();
             }
             return;
           }
 
-          if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
-            pt.marked = true;
-            markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
-            showBannerNotification(`Manually marked ${pt.label}`);
-            redraw();
-            return;
-          }
+           if (pt.marked && !lbl.includes('reward')) {
+  if (eraserMode) {
+    pt.marked = false;
+    redraw();
+  }
+  return;
+}
+
+             if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
+  pt.marked = true;
+  markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+  redraw();
+  return;
+}
 
           const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
           const highlighted = isPointHighlighted(pt, validPairs);
@@ -1175,17 +1194,20 @@
             pt.state = (pt.state + 1) % 3;
 
             if (pt.state === 1) {
-              let prefix = lbl.substring(0, lbl.indexOf('_reward'));
-              if (prefix === 'boss') prefix = 'beefy_bearpion_boss';
-              if (prefix === 'white-wolf') prefix = 'white_wolf';
+              let category = 'fist';
+              if (lbl.includes('connect')) category = 'connect';
+              else if (lbl.includes('boss')) category = 'beefy_bearpion_boss';
+              else if (lbl.includes('purple')) category = 'purple_pup';
+              else if (lbl.includes('green')) category = 'green_growler';
+              else if (lbl.includes('grey')) category = 'grey_hound';
+              else if (lbl.includes('white')) category = 'white_wolf';
+              else if (lbl.includes('primal')) category = 'primal_hare';
+              else if (lbl.includes('punk')) category = 'punk_hare';
 
-              const gemsCount = monsterGemRewards[prefix] ? monsterGemRewards[prefix][1] : 3;
+              const isSubSlot = lbl.endsWith('_sub');
+              const gemVal = rewardGemValues[category] ? rewardGemValues[category][isSubSlot ? 2 : 1] : 2;
 
-              if (prefix === 'beefy_bearpion_boss') {
-                showBannerNotification(`👑 Boss Reward Claimed! Mark ${gemsCount} Gems on your score tracker. (Other players take 2 Life Damage)`);
-              } else {
-                showBannerNotification(`🏆 ${prefix.replace(/_/g, ' ')} 1st Reward Claimed! Mark ${gemsCount} Gems on your score tracker.`);
-              }
+              showBannerNotification(`🏆 Claimed ${category.replace(/_/g, ' ')} ${isSubSlot ? 'Sub' : '1st'} Reward! Mark ${gemVal} Gems on your score tracker.`);
             } else if (pt.state === 2) {
               showBannerNotification(`❌ 1st Reward marked as claimed by another player.`);
             }
@@ -1231,10 +1253,10 @@
                     
                     if (r1st && r1st.state === 0) {
                       r1st.state = 1;
-                      const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][1] : 3;
+                      const gemVal = rewardGemValues[prefix] ? rewardGemValues[prefix][1] : 2;
                       showBannerNotification(`🎉 Defeated ${prefix.replace(/_/g, ' ')}! Claimed 1st Reward: Mark ${gemVal} Gems on your score tracker.`);
                     } else {
-                      const gemVal = monsterGemRewards[prefix] ? monsterGemRewards[prefix][2] : 1;
+                      const gemVal = rewardGemValues[prefix] ? rewardGemValues[prefix][2] : 1;
                       showBannerNotification(`⚔️ Defeated ${prefix.replace(/_/g, ' ')} (2nd Slayer)! Mark ${gemVal} Gem(s) on your score tracker.`);
                     }
                   }
@@ -1320,6 +1342,7 @@
           last.pt.state = (last.pt.state + 2) % 3;
         } else {
           last.pt.marked = false;
+          if (last.pt.textValue !== undefined) last.pt.textValue = "";
         }
 
         if (last.linkedPts && last.linkedPts.length > 0) {
@@ -1349,7 +1372,7 @@
 
     function clearMarks() {
       if (confirm("Reset all marked spaces and restart intro?")) {
-        points.forEach(p => { p.marked = false; p.state = 0; });
+        points.forEach(p => { p.marked = false; p.state = 0; p.textValue = ""; });
         markHistory = [];
         diceRollHistory = [];
         poolDice = [];
