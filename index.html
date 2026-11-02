@@ -320,8 +320,7 @@
       transition: transform 0.2s, background 0.2s;
     }
 
-    /* 📜 Rule Reference Modal Styles */
-    /* 📜 Rule Reference Modal Styles (Desktop + Mobile Responsive) */
+   /* 📜 Rule Reference Modal Styles */
 #rules-modal {
   display: none;
   position: fixed;
@@ -331,17 +330,17 @@
   z-index: 10001;
   justify-content: center;
   align-items: center;
-  padding: 12px;
+  padding: 8px;
   backdrop-filter: blur(6px);
 }
 
 .rules-card {
   background: #18181b;
   border: 1px solid #3f3f46;
-  border-radius: 12px;
+  border-radius: 10px;
   width: 100%;
   max-width: 680px;
-  max-height: 85vh;
+  height: 94vh;
   display: flex;
   flex-direction: column;
   box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
@@ -349,45 +348,49 @@
 }
 
 .rules-header {
-  padding: 12px 16px;
+  padding: 8px 14px;
   background: #27272a;
   display: flex;
   justify-content: space-between;
   align-items: center;
   border-bottom: 1px solid #3f3f46;
   flex-shrink: 0;
+  height: 44px;
 }
 
 .rules-header h3 {
-  font-size: 16px;
+  font-size: 15px;
   color: #f4f4f5;
   font-weight: 700;
 }
 
 .rules-body {
-  padding: 12px;
+  flex: 1;
+  padding: 8px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
   -webkit-overflow-scrolling: touch;
 }
 
 .rule-accordion-item {
   background: #27272a;
-  border-radius: 8px;
+  border-radius: 6px;
   overflow: hidden;
   border: 1px solid #3f3f46;
+  flex-shrink: 0;
 }
 
+/* Force override global button padding/height for accordion headers */
 .rule-accordion-header {
   width: 100% !important;
   height: auto !important;
-  min-height: 44px !important;
-  padding: 10px 14px !important;
+  min-height: 36px !important;
+  padding: 8px 12px !important;
   background: #27272a !important;
   color: #38bdf8 !important;
-  font-size: 14px !important;
+  font-size: 13px !important;
   font-weight: 700 !important;
   text-align: left !important;
   border: none !important;
@@ -395,7 +398,7 @@
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  line-height: 1.3 !important;
+  line-height: 1.2 !important;
   cursor: pointer;
 }
 
@@ -405,17 +408,17 @@
 
 .rule-accordion-content {
   display: none;
-  padding: 10px 14px;
-  font-size: 13px;
-  line-height: 1.5;
+  padding: 8px 12px;
+  font-size: 12px;
+  line-height: 1.4;
   color: #d4d4d8;
   background: #18181b;
   border-top: 1px solid #3f3f46;
 }
 
 .rule-accordion-content ul {
-  padding-left: 18px;
-  margin-top: 4px;
+  padding-left: 16px;
+  margin-top: 2px;
 }
 
 .rule-accordion-content li {
@@ -460,6 +463,33 @@
     @media (max-width: 1366px) and (orientation: portrait) {
       #rotate-notice { display: flex; }
     }
+
+    /* 📱 Mobile Landscape Specific Overrides */
+@media (max-height: 500px) and (orientation: landscape) {
+  #rules-modal {
+    padding: 4px !important;
+  }
+  .rules-card {
+    height: 98vh !important;
+    border-radius: 6px !important;
+  }
+  .rules-header {
+    height: 36px !important;
+    padding: 4px 10px !important;
+  }
+  .rules-header h3 {
+    font-size: 13px !important;
+  }
+  .rule-accordion-header {
+    min-height: 32px !important;
+    padding: 6px 10px !important;
+    font-size: 12px !important;
+  }
+  .rule-accordion-content {
+    font-size: 11px !important;
+    padding: 6px 10px !important;
+  }
+}
   </style>
 </head>
 <body>
