@@ -321,12 +321,13 @@
     }
 
     /* 📜 Rule Reference Modal Styles */
-    #rules-modal {
+    /* 📜 Rule Reference Modal Styles (Desktop + Mobile Responsive) */
+#rules-modal {
   display: none;
   position: fixed;
   top: 0; left: 0; 
   width: 100vw; height: 100vh;
-  background: rgba(9, 9, 11, 0.92);
+  background: rgba(9, 9, 11, 0.94);
   z-index: 10001;
   justify-content: center;
   align-items: center;
@@ -348,7 +349,7 @@
 }
 
 .rules-header {
-  padding: 14px 18px;
+  padding: 12px 16px;
   background: #27272a;
   display: flex;
   justify-content: space-between;
@@ -364,11 +365,11 @@
 }
 
 .rules-body {
-  padding: 14px;
+  padding: 12px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   -webkit-overflow-scrolling: touch;
 }
 
@@ -379,12 +380,11 @@
   border: 1px solid #3f3f46;
 }
 
-/* Reset fixed button height specifically for accordion headers */
 .rule-accordion-header {
   width: 100% !important;
   height: auto !important;
-  min-height: 48px !important;
-  padding: 12px 16px !important;
+  min-height: 44px !important;
+  padding: 10px 14px !important;
   background: #27272a !important;
   color: #38bdf8 !important;
   font-size: 14px !important;
@@ -395,7 +395,7 @@
   display: flex !important;
   justify-content: space-between !important;
   align-items: center !important;
-  line-height: 1.4 !important;
+  line-height: 1.3 !important;
   cursor: pointer;
 }
 
@@ -405,9 +405,9 @@
 
 .rule-accordion-content {
   display: none;
-  padding: 14px 16px;
+  padding: 10px 14px;
   font-size: 13px;
-  line-height: 1.6;
+  line-height: 1.5;
   color: #d4d4d8;
   background: #18181b;
   border-top: 1px solid #3f3f46;
@@ -419,7 +419,7 @@
 }
 
 .rule-accordion-content li {
-  margin-bottom: 6px;
+  margin-bottom: 4px;
 }
 
     /* 📱 Mobile & Tablet Responsive Media Queries */
