@@ -154,7 +154,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform 0.2s ease;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
       background: #f8fafc;
       border: 2px solid #cbd5e1;
       box-shadow: 0 4px 6px rgba(0,0,0,0.3);
@@ -163,6 +163,16 @@
       background: #0f172a;
       border: 2px solid #334155;
       box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+    .die.selected {
+      outline: 3px solid #38bdf8;
+      transform: translateY(-4px);
+      box-shadow: 0 6px 14px rgba(56, 189, 248, 0.5);
+    }
+    .die.black.selected {
+      outline: 3px solid #c084fc;
+      transform: translateY(-4px);
+      box-shadow: 0 6px 14px rgba(192, 132, 252, 0.5);
     }
     .pip-grid {
       display: grid;
@@ -320,112 +330,115 @@
       transition: transform 0.2s, background 0.2s;
     }
 
-   /* 📜 Rule Reference Modal Styles */
-#rules-modal {
-  display: none;
-  position: fixed;
-  top: 0; left: 0; 
-  width: 100vw; height: 100vh;
-  background: rgba(9, 9, 11, 0.94);
-  z-index: 10001;
-  justify-content: center;
-  align-items: center;
-  padding: 8px;
-  backdrop-filter: blur(6px);
-}
+    /* 📜 Rule Reference Modal Styles */
+    #rules-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; 
+      width: 100vw; height: 100vh;
+      background: rgba(9, 9, 11, 0.94);
+      z-index: 10001;
+      justify-content: center;
+      align-items: center;
+      padding: 8px;
+      backdrop-filter: blur(6px);
+    }
 
-.rules-card {
-  background: #18181b;
-  border: 1px solid #3f3f46;
-  border-radius: 10px;
-  width: 100%;
-  max-width: 680px;
-  height: 94vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
-  overflow: hidden;
-}
+    .rules-card {
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 680px;
+      height: 94vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+    }
 
-.rules-header {
-  padding: 8px 14px;
-  background: #27272a;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #3f3f46;
-  flex-shrink: 0;
-  height: 44px;
-}
+    .rules-header {
+      padding: 8px 14px;
+      background: #27272a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #3f3f46;
+      flex-shrink: 0;
+      height: 44px;
+    }
 
-.rules-header h3 {
-  font-size: 15px;
-  color: #f4f4f5;
-  font-weight: 700;
-}
+    .rules-header h3 {
+      font-size: 15px;
+      color: #f4f4f5;
+      font-weight: 700;
+    }
 
-.rules-body {
-  flex: 1;
-  padding: 8px;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  -webkit-overflow-scrolling: touch;
-}
+    .rules-body {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
 
-.rule-accordion-item {
-  background: #27272a;
-  border-radius: 6px;
-  overflow: hidden;
-  border: 1px solid #3f3f46;
-  flex-shrink: 0;
-}
+    .rule-accordion-item {
+      background: #27272a;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #3f3f46;
+      flex-shrink: 0;
+    }
 
-/* Force override global button padding/height for accordion headers */
-.rule-accordion-header {
-  width: 100% !important;
-  height: auto !important;
-  min-height: 36px !important;
-  padding: 8px 12px !important;
-  background: #27272a !important;
-  color: #38bdf8 !important;
-  font-size: 13px !important;
-  font-weight: 700 !important;
-  text-align: left !important;
-  border: none !important;
-  border-radius: 0 !important;
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  line-height: 1.2 !important;
-  cursor: pointer;
-}
+    .rule-accordion-header {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 36px !important;
+      padding: 8px 12px !important;
+      background: #27272a !important;
+      color: #38bdf8 !important;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      text-align: left !important;
+      border: none !important;
+      border-radius: 0 !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      line-height: 1.2 !important;
+      cursor: pointer;
+    }
 
-.rule-accordion-header:hover {
-  background: #3f3f46 !important;
-}
+    .rule-accordion-header:hover {
+      background: #3f3f46 !important;
+    }
 
-.rule-accordion-content {
-  display: none;
-  padding: 8px 12px;
-  font-size: 12px;
-  line-height: 1.4;
-  color: #d4d4d8;
-  background: #18181b;
-  border-top: 1px solid #3f3f46;
-}
+    .rule-accordion-content {
+      display: none;
+      padding: 8px 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #d4d4d8;
+      background: #18181b;
+      border-top: 1px solid #3f3f46;
+    }
 
-.rule-accordion-content ul {
-  padding-left: 16px;
-  margin-top: 2px;
-}
+    .rule-accordion-content ul {
+      padding-left: 16px;
+      margin-top: 2px;
+    }
 
-.rule-accordion-content li {
-  margin-bottom: 4px;
-}
+    .rule-accordion-content li {
+      margin-bottom: 4px;
+    }
 
     /* 📱 Mobile & Tablet Responsive Media Queries */
+    @media (pointer: coarse) {
+      #btn-admin-auth, #btn-mode { display: none !important; }
+    }
+
     @media (pointer: coarse), (max-width: 1366px) {
       body { padding: 6px; }
       header { padding: 8px 12px; margin-bottom: 6px; }
@@ -435,9 +448,6 @@
         font-size: 12px;
         border-radius: 20px;
       }
-
-      /* Hide Calibration Button on Touch Devices (Mobile & Tablet) */
-      #btn-mode { display: none !important; }
 
       /* Thicker Roll Button for Touchscreens */
       #rollButton {
@@ -465,31 +475,31 @@
     }
 
     /* 📱 Mobile Landscape Specific Overrides */
-@media (max-height: 500px) and (orientation: landscape) {
-  #rules-modal {
-    padding: 4px !important;
-  }
-  .rules-card {
-    height: 98vh !important;
-    border-radius: 6px !important;
-  }
-  .rules-header {
-    height: 36px !important;
-    padding: 4px 10px !important;
-  }
-  .rules-header h3 {
-    font-size: 13px !important;
-  }
-  .rule-accordion-header {
-    min-height: 32px !important;
-    padding: 6px 10px !important;
-    font-size: 12px !important;
-  }
-  .rule-accordion-content {
-    font-size: 11px !important;
-    padding: 6px 10px !important;
-  }
-}
+    @media (max-height: 500px) and (orientation: landscape) {
+      #rules-modal {
+        padding: 4px !important;
+      }
+      .rules-card {
+        height: 98vh !important;
+        border-radius: 6px !important;
+      }
+      .rules-header {
+        height: 36px !important;
+        padding: 4px 10px !important;
+      }
+      .rules-header h3 {
+        font-size: 13px !important;
+      }
+      .rule-accordion-header {
+        min-height: 32px !important;
+        padding: 6px 10px !important;
+        font-size: 12px !important;
+      }
+      .rule-accordion-content {
+        font-size: 11px !important;
+        padding: 6px 10px !important;
+      }
+    }
   </style>
 </head>
 <body>
@@ -599,7 +609,7 @@
   </div>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.7.0</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.9.2</span></h2>
     <div class="header-controls">
       <button onclick="toggleRulesModal()" style="background: #0284c7;">📜 How to Play</button>
       
@@ -617,11 +627,16 @@
         </select>
       </div>
 
+      <button id="btn-adjacency" onclick="toggleStrictAdjacency()" style="background: #16a34a;">🌐 Adjacency: ON</button>
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Previous Dice Roll</button>
       <button id="btn-eraser" onclick="toggleEraserMode()" style="background: #475569;">🔒 Eraser: OFF</button>
       <button id="btn-freemark" onclick="toggleFreeMarkMode()" style="background: #475569;">✏️ Free Mark: OFF</button>
-      <button id="btn-mode" onclick="toggleCalibration()">🔧 Toggle Calibration Mode</button>
+      
+      <!-- Admin & Calibration Block -->
+      <button id="btn-admin-auth" onclick="promptAdminPassword()" style="background: #334155;">🔐 Admin</button>
+      <button id="btn-mode" onclick="toggleCalibration()" style="display: none; background: #2563eb;">🔧 Toggle Calibration Mode</button>
+
       <button onclick="clearMarks()" class="danger">Reset Game</button>
     </div>
   </header>
@@ -648,6 +663,7 @@
       <div class="dice-group" id="diceTray">
         <!-- Rendered Dynamically -->
       </div>
+      <div id="dice-duplicate-note" style="min-height: 20px; font-size: 11px; text-align: center; font-weight: 600; margin-top: 4px;"></div>
 
       <hr style="border-color: #3f3f46;">
 
@@ -661,12 +677,14 @@
     let allowEditingPoints = true;
     let eraserMode = false;
     let freeMarkMode = false;
+    let strictAdjacencyMode = true; // Strict Adjacency Rule Toggle
     let isRolling = false;
     let playerColor = "#dc2626"; // Default Player Cross Color (Red)
     let markHistory = [];
     let diceRollHistory = [];
 
     let poolDice = [];
+    let selectedDiceIds = []; // Active manual dice index stack (Max 2 selected)
 
     const showcaseMonsters = [
       {
@@ -753,28 +771,103 @@
     }
 
     function toggleAccordion(btn) {
-  const content = btn.nextElementSibling;
-  const arrow = btn.querySelector('span');
-  
-  const isOpening = content.style.display !== 'block';
-  
-  // Optional: Auto-close other items to keep mobile viewport compact
-  document.querySelectorAll('.rule-accordion-content').forEach(el => {
-    el.style.display = 'none';
-  });
-  document.querySelectorAll('.rule-accordion-header span').forEach(el => {
-    el.textContent = '▼';
-  });
+      const content = btn.nextElementSibling;
+      const arrow = btn.querySelector('span');
+      
+      const isOpening = content.style.display !== 'block';
+      
+      document.querySelectorAll('.rule-accordion-content').forEach(el => {
+        el.style.display = 'none';
+      });
+      document.querySelectorAll('.rule-accordion-header span').forEach(el => {
+        el.textContent = '▼';
+      });
 
-  if (isOpening) {
-    content.style.display = 'block';
-    arrow.textContent = '▲';
-  }
-}
+      if (isOpening) {
+        content.style.display = 'block';
+        arrow.textContent = '▲';
+      }
+    }
 
     function changePlayerColor(colorHex) {
       playerColor = colorHex;
       redraw();
+    }
+
+    function toggleStrictAdjacency() {
+      strictAdjacencyMode = !strictAdjacencyMode;
+      const btn = document.getElementById('btn-adjacency');
+      if (strictAdjacencyMode) {
+        btn.textContent = '🌐 Adjacency: ON';
+        btn.style.background = '#16a34a';
+      } else {
+        btn.textContent = '🌐 Adjacency: OFF';
+        btn.style.background = '#475569';
+      }
+      redraw();
+    }
+
+    /* 🔑 Password Protection to Reveal Calibration Toggle */
+    let adminUnlocked = false;
+
+    function promptAdminPassword() {
+      const modeBtn = document.getElementById('btn-mode');
+      const authBtn = document.getElementById('btn-admin-auth');
+
+      if (adminUnlocked) {
+        adminUnlocked = false;
+        if (calibrationMode) toggleCalibration(); // Turn off calibration if active
+        
+        modeBtn.style.setProperty('display', 'none', 'important');
+        authBtn.style.background = '#334155';
+        authBtn.textContent = '🔐 Admin';
+        showBannerNotification("🔒 Admin Mode Locked.");
+        return;
+      }
+
+      const pass = prompt("Enter Admin Password:");
+      if (pass === "tueurdemonstres") {
+        adminUnlocked = true;
+        
+        // Force override any CSS display:none !important
+        modeBtn.style.setProperty('display', 'inline-block', 'important');
+        authBtn.style.background = '#16a34a';
+        authBtn.textContent = '🔓 Admin Unlocked';
+        
+        showBannerNotification("🔓 Admin Unlocked: Calibration toggle is now available!");
+      } else if (pass !== null) {
+        alert("Incorrect password!");
+      }
+    }
+
+    /* 🔍 Proximity Adjacency Checker (Fixed for Monster Defeat Barrier) */
+    function isAdjacentToMarked(targetPoint) {
+      if (!strictAdjacencyMode) return true;
+      const lbl = targetPoint.label.toLowerCase();
+      
+      // Start spaces can be entered freely
+      if (lbl.startsWith('start_')) return true;
+
+      // Proximity distance threshold (~7% of board dimension)
+      const THRESHOLD = 0.07;
+
+      return points.some(p => {
+        if (!p.marked) return false;
+
+        // 🛑 If the marked point is a Monster HP box, ONLY treat it as adjacent 
+        // if that monster has been FULLY DEFEATED (all HP boxes marked)
+        if (isMonsterHpBox(p.label)) {
+          const prefix = getMonsterPrefixFromTarget(p.label);
+          if (prefix) {
+            const remainingHp = getNextUnmarkedMonsterBox(prefix);
+            if (remainingHp) return false; // Monster still alive -> Cannot pass through!
+          }
+        }
+
+        const dx = p.x - targetPoint.x;
+        const dy = p.y - targetPoint.y;
+        return Math.hypot(dx, dy) <= THRESHOLD;
+      });
     }
 
     const points = [
@@ -1066,32 +1159,95 @@
       return `<div class="pip-grid">${gridContent}</div>`;
     }
 
+    /* 🎲 Toggle Die Manual Pairing Selection */
+    function toggleDieSelection(id) {
+      if (isRolling) return;
+      if (selectedDiceIds.includes(id)) {
+        selectedDiceIds = selectedDiceIds.filter(dId => dId !== id);
+      } else {
+        if (selectedDiceIds.length >= 2) {
+          selectedDiceIds.shift(); // Lock maximum selection pairing to exactly 2 dice
+        }
+        selectedDiceIds.push(id);
+      }
+      renderDiceTray(poolDice, false);
+      redraw();
+    }
+
     function renderDiceTray(diceList, animating = false) {
       const tray = document.getElementById('diceTray');
+      const noteEl = document.getElementById('dice-duplicate-note');
+
       if (!diceList || diceList.length === 0) {
         tray.innerHTML = [0, 1, 2, 3, 4].map(id => `
           <div class="${id === 4 ? 'die black' : 'die'}" style="opacity:0.4;">
             <span style="font-size:20px; color:${id === 4 ? '#64748b' : '#94a3b8'};">-</span>
           </div>
         `).join('');
+        if (noteEl) noteEl.innerHTML = '';
         return;
       }
 
+      // 1. Render Dice Elements
       tray.innerHTML = diceList.map((d, i) => {
         const isBlack = (d.id === 4);
-        const bgClass = isBlack ? 'die black' : 'die';
+        const isSelected = selectedDiceIds.includes(d.id);
+        const bgClass = `${isBlack ? 'die black' : 'die'} ${isSelected ? 'selected' : ''}`;
         const animClass = animating ? 'rolling-tumble' : '';
         const delayStyle = `animation-delay: ${i * 0.08}s;`;
 
         return `
-          <div class="${bgClass} ${animClass}" style="${delayStyle}">
+          <div class="${bgClass} ${animClass}" style="${delayStyle} cursor:pointer;" onclick="toggleDieSelection(${d.id})">
             ${getPipLayoutHtml(d.val, isBlack)}
           </div>
         `;
       }).join('');
+
+      // 2. Check for Ambiguous Pairs (White vs. Black Die Distinction Included)
+      if (noteEl && !animating) {
+        const validPairs = getValidPairs(diceList);
+        const sumDistinctPairs = {};
+        
+        validPairs.forEach(p => {
+          // Sort dice values and flag if the Black Die (id: 4) is used
+          const vals = p.diceObjects.map(d => d.val).sort((a, b) => a - b);
+          const usesBlack = p.diceObjects.some(d => d.id === 4);
+          const comboKey = `${vals[0]}+${vals[1]}${usesBlack ? '_BLACK' : '_WHITE'}`;
+          
+          if (!sumDistinctPairs[p.sum]) {
+            sumDistinctPairs[p.sum] = new Set();
+          }
+          sumDistinctPairs[p.sum].add(comboKey);
+        });
+
+        const hasAmbiguousSums = Object.values(sumDistinctPairs).some(set => set.size > 1);
+
+        if (hasAmbiguousSums && selectedDiceIds.length < 2) {
+          noteEl.innerHTML = `<span style="color: #f59e0b;">⚠️ Multiple ways to form a sum! Tap 2 dice to select your pair.</span>`;
+        } else if (selectedDiceIds.length === 2) {
+          noteEl.innerHTML = `<span style="color: #38bdf8;">✓ Pair selected</span>`;
+        } else {
+          noteEl.innerHTML = '';
+        }
+      }
     }
 
     function getValidPairs(diceArr) {
+      // 🎯 Prioritize Interactive manual Selection
+      if (selectedDiceIds.length === 2) {
+        const selectedObj = diceArr.filter(d => selectedDiceIds.includes(d.id));
+        if (selectedObj.length === 2) {
+          const usesBlack = selectedObj.some(d => d.id === 4);
+          return [{
+            sum: selectedObj[0].val + selectedObj[1].val,
+            isDouble: selectedObj[0].val === selectedObj[1].val,
+            usesBlack: usesBlack,
+            diceObjects: selectedObj
+          }];
+        }
+      }
+
+      // 🔍 Otherwise default search comb filter
       const pairs = [];
       for (let i = 0; i < diceArr.length; i++) {
         for (let j = i + 1; j < diceArr.length; j++) {
@@ -1110,16 +1266,31 @@
     function consumeDiceForSum(sumVal, isDoubleReq, isDoubleDoor) {
       const valid = getValidPairs(poolDice);
       let match = null;
-      if (isDoubleDoor) {
-        match = valid.find(p => p.isDouble && !p.usesBlack) || valid.find(p => p.isDouble);
+
+      if (selectedDiceIds.length === 2) {
+        // Evaluate exclusive match using chosen dice
+        match = valid.find(p => {
+          if (isDoubleDoor) return p.isDouble;
+          if (sumVal && p.sum === sumVal) {
+            return isDoubleReq ? p.isDouble : true;
+          }
+          if (isDoubleReq && !sumVal) return p.isDouble;
+          return false;
+        });
       } else {
-        match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true) && !p.usesBlack) ||
-                valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+        // Fallback default resolution behavior
+        if (isDoubleDoor) {
+          match = valid.find(p => p.isDouble && !p.usesBlack) || valid.find(p => p.isDouble);
+        } else {
+          match = valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true) && !p.usesBlack) ||
+                  valid.find(p => p.sum === sumVal && (isDoubleReq ? p.isDouble : true));
+        }
       }
 
       if (match) {
         const removedIds = match.diceObjects.map(d => d.id);
         poolDice = poolDice.filter(d => !removedIds.includes(d.id));
+        selectedDiceIds = []; // reset active select arrays
         return match.diceObjects;
       }
       return null;
@@ -1216,6 +1387,22 @@
 
     function updatePairsPanel(validPairs) {
       const container = document.getElementById('pairs-container');
+      
+      // Filter list when exclusive manually highlighted pairings are locked
+      if (selectedDiceIds.length === 2 && validPairs.length === 1) {
+        const activePair = validPairs[0];
+        const valL = `${activePair.sum}${activePair.isDouble ? ' (Dbl)' : ''}`;
+        
+        container.innerHTML = `
+          <div>
+            <strong>Interactive Selection:</strong><br>
+            <span class="pair-tag ${activePair.usesBlack ? 'tag-black' : 'tag-white'}">${valL}</span>
+            <span style="display:inline-block; margin-left:6px; color:#a1a1aa; font-size:11px;">(Tap another die or click map)</span>
+          </div>
+        `;
+        return;
+      }
+
       if (!validPairs || validPairs.length === 0) {
         container.innerHTML = '<div>Roll dice to see available combinations.</div>';
         return;
@@ -1271,6 +1458,9 @@
 
       if (isHpBox || isBookkeeping) return false;
 
+      // Check Adjacency Rule first (must be a start space or near marked path)
+      if (!isAdjacentToMarked(p)) return false;
+
       const numVal = parseInt(p.label.replace(/\D/g, ''));
       const isDoubleReq = p.label.toLowerCase().includes('double');
       const isDoubleDoor = p.label.toLowerCase() === 'double_door';
@@ -1303,6 +1493,7 @@
       syncCanvasSize();
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
+      // Validate combo pool searches with dynamic matching options
       const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
       updatePairsPanel(validPairs);
 
@@ -1320,34 +1511,36 @@
         let isBlackDieMove = false;
 
         if (validPairs.length > 0 && !p.marked && !isHpBox && !isBookkeeping) {
-          const numVal = parseInt(p.label.replace(/\D/g, ''));
-          const isDoubleReq = p.label.toLowerCase().includes('double');
-          const isDoubleDoor = p.label.toLowerCase() === 'double_door';
+          if (isAdjacentToMarked(p)) {
+            const numVal = parseInt(p.label.replace(/\D/g, ''));
+            const isDoubleReq = p.label.toLowerCase().includes('double');
+            const isDoubleDoor = p.label.toLowerCase() === 'double_door';
 
-          if (!isTargetZone) {
-            const matches = validPairs.filter(pair => {
-              if (isDoubleDoor) return pair.isDouble;
-              if (numVal && pair.sum === numVal) {
-                return isDoubleReq ? pair.isDouble : true;
+            if (!isTargetZone) {
+              const matches = validPairs.filter(pair => {
+                if (isDoubleDoor) return pair.isDouble;
+                if (numVal && pair.sum === numVal) {
+                  return isDoubleReq ? pair.isDouble : true;
+                }
+                if (isDoubleReq && !numVal) return pair.isDouble;
+                return false;
+              });
+
+              if (matches.length > 0) {
+                isHighlighted = true;
+                isBlackDieMove = matches.every(m => m.usesBlack);
               }
-              if (isDoubleReq && !numVal) return pair.isDouble;
-              return false;
-            });
-
-            if (matches.length > 0) {
-              isHighlighted = true;
-              isBlackDieMove = matches.every(m => m.usesBlack);
-            }
-          } else {
-            const prefix = getMonsterPrefixFromTarget(p.label);
-            if (prefix) {
-              const nextHp = getNextUnmarkedMonsterBox(prefix);
-              if (nextHp) {
-                const activeNums = getActiveNumbersForMonster(prefix);
-                const matches = validPairs.filter(pair => activeNums.includes(pair.sum));
-                if (matches.length > 0) {
-                  isHighlighted = true;
-                  isBlackDieMove = matches.every(m => m.usesBlack);
+            } else {
+              const prefix = getMonsterPrefixFromTarget(p.label);
+              if (prefix) {
+                const nextHp = getNextUnmarkedMonsterBox(prefix);
+                if (nextHp) {
+                  const activeNums = getActiveNumbersForMonster(prefix);
+                  const matches = validPairs.filter(pair => activeNums.includes(pair.sum));
+                  if (matches.length > 0) {
+                    isHighlighted = true;
+                    isBlackDieMove = matches.every(m => m.usesBlack);
+                  }
                 }
               }
             }
@@ -1556,6 +1749,7 @@
                   }
 
                   markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPts: [] });
+                  renderDiceTray(poolDice, false);
                 }
               }
             }
@@ -1584,6 +1778,7 @@
                 }
 
                 markHistory.push({ pt: pt, consumedDice: consumed, linkedPts: linkedPts });
+                renderDiceTray(poolDice, false);
               }
             }
           }
@@ -1608,6 +1803,7 @@
         val: Math.floor(Math.random() * 6) + 1
       }));
 
+      selectedDiceIds = []; // clear selection triggers on a roll
       renderDiceTray(poolDice, true);
 
       setTimeout(() => {
@@ -1623,6 +1819,7 @@
     function undoDiceRoll() {
       if (diceRollHistory.length > 0) {
         poolDice = diceRollHistory.pop();
+        selectedDiceIds = [];
         renderDiceTray(poolDice, false);
         redraw();
       }
@@ -1652,7 +1849,9 @@
           poolDice.sort((a, b) => a.id - b.id);
         }
 
+        selectedDiceIds = []; // Reset visual pairing outline
         document.getElementById('reward-banner').style.display = 'none';
+        renderDiceTray(poolDice, false);
         redraw();
       }
     }
@@ -1670,6 +1869,7 @@
         markHistory = [];
         diceRollHistory = [];
         poolDice = [];
+        selectedDiceIds = [];
         document.getElementById('reward-banner').style.display = 'none';
         renderDiceTray(poolDice, false);
         redraw();
@@ -1693,6 +1893,7 @@
     img.onload = () => {
       syncCanvasSize();
       poolDice = [];
+      selectedDiceIds = [];
       renderDiceTray(poolDice, false);
       redraw();
       startIntroShowcase();
