@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
   <title>Dungeons, Dice & Danger - Game Engine</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -305,7 +305,8 @@
       background: linear-gradient(135deg, #1d4ed8, #1e40af);
     }
 
-    @media (max-width: 1024px) {
+    /* 📱 Mobile & Tablet Responsive Media Queries */
+    @media (pointer: coarse), (max-width: 1366px) {
       body { padding: 6px; }
       header { padding: 8px 12px; margin-bottom: 6px; }
       header h2 { font-size: 16px; }
@@ -315,7 +316,15 @@
         border-radius: 20px;
       }
 
+      /* Hide Calibration Button on Touch Devices (Mobile & Tablet) */
       #btn-mode { display: none !important; }
+
+      /* Thicker Roll Button for Touchscreens */
+      #rollButton {
+        padding: 16px 20px;
+        font-size: 18px;
+        border-radius: 10px;
+      }
 
       .main-layout { gap: 10px; }
       .panel {
@@ -331,7 +340,7 @@
       .pip, .pip-empty { width: 6px; height: 6px; }
     }
 
-    @media (max-width: 1024px) and (orientation: portrait) {
+    @media (max-width: 1366px) and (orientation: portrait) {
       #rotate-notice { display: flex; }
     }
   </style>
@@ -357,7 +366,7 @@
   </div>
 
   <header>
-    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.6.0</span></h2>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v0.6.1</span></h2>
     <div class="header-controls">
       <button onclick="undoLastAction()">↩ Undo Action</button>
       <button onclick="undoDiceRoll()">🎲 Previous Dice Roll</button>
@@ -457,9 +466,9 @@
           if (m.isBoss) {
             card.classList.add('boss-glow');
             nameEl.style.color = '#ef4444';
-            flavorEl.textContent = "⚠️ FINAL BOSS SPOTTED! Defeat the Beefy Bearpion to conquer the realm!";
+            flavorEl.textContent = "FINAL BOSS SPOTTED! Defeat all the monsters to conquer the realm!";
 
-            const isMobileOrTablet = window.innerWidth <= 1024;
+            const isMobileOrTablet = window.innerWidth <= 1366;
             if (isMobileOrTablet) {
               btn.style.display = 'none';
               setTimeout(() => { closeIntroModal(); }, 1500);
@@ -718,7 +727,6 @@
       }
     };
 
-    // Corrected Gem Reward Payouts
     const rewardGemValues = {
       purple_pup: { 1: 2, 2: 1 },
       green_growler: { 1: 2, 2: 1 },
@@ -1168,20 +1176,20 @@
             return;
           }
 
-           if (pt.marked && !lbl.includes('reward')) {
-  if (eraserMode) {
-    pt.marked = false;
-    redraw();
-  }
-  return;
-}
+          if (pt.marked && !lbl.includes('reward')) {
+            if (eraserMode) {
+              pt.marked = false;
+              redraw();
+            }
+            return;
+          }
 
-             if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
-  pt.marked = true;
-  markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
-  redraw();
-  return;
-}
+          if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
+            pt.marked = true;
+            markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+            redraw();
+            return;
+          }
 
           const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
           const highlighted = isPointHighlighted(pt, validPairs);
@@ -1207,7 +1215,7 @@
               const isSubSlot = lbl.endsWith('_sub');
               const gemVal = rewardGemValues[category] ? rewardGemValues[category][isSubSlot ? 2 : 1] : 2;
 
-              showBannerNotification(`🏆 Claimed ${category.replace(/_/g, ' ')} ${isSubSlot ? 'Sub' : '1st'} Reward! Mark ${gemVal} Gems on your score tracker.`);
+              showBannerNotification(`🏆 Claimed ${category.replace(/_/g, ' ').toUpperCase()} ${isSubSlot ? 'Sub' : '1st'} Reward! Mark ${gemVal} Gems on your score tracker.`);
             } else if (pt.state === 2) {
               showBannerNotification(`❌ 1st Reward marked as claimed by another player.`);
             }
@@ -1248,16 +1256,18 @@
                   hpBox.marked = true;
 
                   const nextHp = getNextUnmarkedMonsterBox(prefix);
+                  const displayMonsterName = prefix.replace(/_/g, ' ').toUpperCase();
+
                   if (!nextHp) {
                     const r1st = points.find(p => p.label.toLowerCase().includes(prefix) && p.label.toLowerCase().endsWith('_reward_1st'));
                     
                     if (r1st && r1st.state === 0) {
                       r1st.state = 1;
                       const gemVal = rewardGemValues[prefix] ? rewardGemValues[prefix][1] : 2;
-                      showBannerNotification(`🎉 Defeated ${prefix.replace(/_/g, ' ')}! Claimed 1st Reward: Mark ${gemVal} Gems on your score tracker.`);
+                      showBannerNotification(`🎉 Defeated ${displayMonsterName}! Claimed 1st Reward: Mark ${gemVal} Gems on your score tracker.`);
                     } else {
                       const gemVal = rewardGemValues[prefix] ? rewardGemValues[prefix][2] : 1;
-                      showBannerNotification(`⚔️ Defeated ${prefix.replace(/_/g, ' ')} (2nd Slayer)! Mark ${gemVal} Gem(s) on your score tracker.`);
+                      showBannerNotification(`⚔️ Defeated ${displayMonsterName} (2nd Slayer)! Mark ${gemVal} Gem(s) on your score tracker.`);
                     }
                   }
 
