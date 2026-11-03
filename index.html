@@ -852,6 +852,7 @@
     let allowEditingPoints = true;
     let eraserMode = false;
     let freeMarkMode = false;
+	let torchActive = false;
     let strictAdjacencyMode = true;
     let isRolling = false;
     let playerColor = "#dc2626";
@@ -1057,12 +1058,10 @@
       if (lbl.startsWith('gem_') || lbl.includes('gem_space')) {
         showBannerNotification(`💎 Gem Unlocked! Mark 1 Gem on your bottom treasure tracker.`);
       } else if (lbl.startsWith('gold_')) {
-        showBannerNotification(`🪙 Gold Unlocked! Collect your gold bonus.`);
-      } else if (lbl.includes('double_door') || lbl.includes('chest')) {
-        showBannerNotification(`🗝️ Treasure Unlocked! Open a chest or claim your reward.`);
-      } else if (lbl.includes('perk_torch')) {
-        showBannerNotification(`🔥 Torch Perk Activated! Cross off any available space or hit an available monster.`);
-      }
+        showBannerNotification(`🪙 You can mark a Treasure Chest Reward.`);
+            } else if (lbl.includes('perk_torch') && !lbl.includes('activator')) {
+      showBannerNotification(`🔥 Torch Perk Activated! Cross off any available space or hit an available monster.`);
+    }
     }
 
     function isConnectedInGraph(idA, idB) {
@@ -1087,13 +1086,14 @@
       }
 
       return points.some(p => {
-        if (!p.marked) return false;
-
-        if (isMonsterHpBox(p.label)) {
-          const prefix = getMonsterPrefixFromTarget(p.label);
-          if (prefix && !isMonsterFullyDefeated(prefix)) {
-            return false;
+        if (!p.marked) {
+          if (p.label.toLowerCase().endsWith('_target')) {
+            const prefix = getMonsterPrefixFromTarget(p.label);
+            if (prefix && isMonsterFullyDefeated(prefix) && isConnectedInGraph(targetId, p.id)) {
+              return true;
+            }
           }
+          return false;
         }
 
         return isConnectedInGraph(targetId, p.id);
@@ -1431,6 +1431,29 @@
       const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
       updatePairsPanel(validPairs);
 
+		// Render graph network lines during calibration / admin mode
+      if (calibrationMode) {
+        ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+        ctx.lineWidth = 1.5;
+        for (const [idA, neighbors] of Object.entries(boardConnections)) {
+          const ptA = points.find(p => p.id === idA);
+          if (!ptA) continue;
+          const ax = ptA.x * canvas.width;
+          const ay = ptA.y * canvas.height;
+          neighbors.forEach(idB => {
+            const ptB = points.find(p => p.id === idB);
+            if (ptB) {
+              const bx = ptB.x * canvas.width;
+              const by = ptB.y * canvas.height;
+              ctx.beginPath();
+              ctx.moveTo(ax, ay);
+              ctx.lineTo(bx, by);
+              ctx.stroke();
+            }
+          });
+        }
+      }
+		
       points.forEach((p, index) => {
         const px = p.x * canvas.width;
         const py = p.y * canvas.height;
@@ -1705,11 +1728,46 @@ if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
 
         if (isBookkeepingPoint(pt.label)) {
           pt.marked = !pt.marked;
-          if (pt.marked) checkSpecialSpaceRewards(pt);
-          markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+          const isTorch = lbl.includes('perk_torch') && !lbl.includes('activator');
+          if (pt.marked) {
+            checkSpecialSpaceRewards(pt);
+            if (isTorch) torchActive = true;
+          } else {
+            if (isTorch) torchActive = false;
+          }
+          markHistory.push({ pt: pt, consumedDice: null, linkedPts: [], toggledTorch: isTorch });
           redraw();
           return;
         }
+
+			if (torchActive) {
+          if (!isAdjacentToMarked(pt)) return;
+          torchActive = false;
+
+          if (lbl.endsWith('_target')) {
+            const prefix = getMonsterPrefixFromTarget(pt.label);
+            const hpBox = getNextUnmarkedMonsterBox(prefix);
+            if (hpBox) {
+              hpBox.marked = true;
+              markHistory.push({ pt: hpBox, consumedDice: null, linkedPts: [], usedTorch: true });
+              checkMonsterDefeatAndNotify(prefix);
+            }
+          } else {
+            pt.marked = true;
+            checkSpecialSpaceRewards(pt);
+            const linkedPts = [];
+            if (lbl.includes('fist_double')) {
+              const autoFist = triggerAutoFistMark();
+              if (autoFist) linkedPts.push(autoFist);
+            }
+            const prefix = getMonsterPrefixFromTarget(pt.label);
+            if (prefix) checkMonsterDefeatAndNotify(prefix);
+            markHistory.push({ pt: pt, consumedDice: null, linkedPts: linkedPts, usedTorch: true });
+          }
+          redraw();
+          return;
+        }
+
 
         if (lbl.endsWith('_target')) {
           const prefix = getMonsterPrefixFromTarget(pt.label);
@@ -1790,6 +1848,12 @@ if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
     function undoLastAction() {
       if (markHistory.length > 0) {
         const last = markHistory.pop();
+		if (last.usedTorch) {
+          torchActive = true;
+        }
+        if (last.toggledTorch) {
+          torchActive = false;
+        }
         if (last.isRewardState) {
           last.pt.state = (last.pt.state + 2) % 3;
         } else {
