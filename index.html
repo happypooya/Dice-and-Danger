@@ -1,4 +1,1260 @@
-function consumeDiceForSum(sumVal, isDoubleReq, isDoubleDoor) {
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes">
+  <title>Dungeons, Dice & Danger - Game Engine</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      background: #121214;
+      color: #e4e4e7;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 12px;
+      min-height: 100vh;
+    }
+
+    #rotate-notice {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(9, 9, 11, 0.98);
+      z-index: 10000;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 24px;
+    }
+    .rotate-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: rotatePulse 2s infinite ease-in-out;
+    }
+    @keyframes rotatePulse {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(90deg) scale(1.1); }
+    }
+
+    header {
+      width: 100%;
+      max-width: 1280px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1f1f23;
+      padding: 10px 18px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .header-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .version-tag {
+      font-size: 11px;
+      color: #71717a;
+      font-family: monospace;
+      font-weight: normal;
+      margin-left: 8px;
+    }
+    .color-picker-container {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      background: #27272a;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .color-picker-container select {
+      background: #18181b;
+      color: #f4f4f5;
+      border: 1px solid #3f3f46;
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 13px;
+      cursor: pointer;
+    }
+    .banner-notification {
+      width: 100%;
+      max-width: 1280px;
+      background: #eab308;
+      color: #000;
+      font-weight: 700;
+      padding: 10px 16px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      text-align: center;
+      display: none;
+      box-shadow: 0 4px 12px rgba(234, 179, 8, 0.3);
+    }
+    .main-layout {
+      display: flex;
+      gap: 16px;
+      max-width: 1280px;
+      width: 100%;
+    }
+    #game-container {
+      position: relative;
+      flex: 1;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: 0 8px 24px rgba(0,0,0,0.6);
+      align-self: flex-start;
+    }
+    #board-img {
+      display: block;
+      width: 100%;
+      height: auto;
+      user-select: none;
+    }
+    #overlay-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      cursor: pointer;
+      touch-action: manipulation;
+    }
+    .panel {
+      width: 320px;
+      background: #1f1f23;
+      padding: 16px;
+      border-radius: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      flex-shrink: 0;
+    }
+
+    .dice-group {
+      display: flex;
+      gap: 8px;
+      margin: 8px 0;
+      justify-content: center;
+      min-height: 52px;
+    }
+    .die {
+      width: 48px;
+      height: 48px;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease, box-shadow 0.2s ease;
+      background: #f8fafc;
+      border: 2px solid #cbd5e1;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+    }
+    .die.black {
+      background: #0f172a;
+      border: 2px solid #334155;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+    }
+    .die.selected {
+      outline: 3px solid #38bdf8;
+      transform: translateY(-4px);
+      box-shadow: 0 6px 14px rgba(56, 189, 248, 0.5);
+    }
+    .die.black.selected {
+      outline: 3px solid #c084fc;
+      transform: translateY(-4px);
+      box-shadow: 0 6px 14px rgba(192, 132, 252, 0.5);
+    }
+    .pip-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      grid-template-rows: repeat(3, 1fr);
+      width: 38px;
+      height: 38px;
+      padding: 4px;
+      align-items: center;
+      justify-items: center;
+    }
+    .pip {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #0f172a;
+    }
+    .die.black .pip {
+      background: #f8fafc;
+    }
+    .pip-empty {
+      width: 8px;
+      height: 8px;
+    }
+
+    @keyframes tumble {
+      0% { transform: translateX(100px) rotate(45deg) scale(0.8); opacity: 0; }
+      50% { transform: translateX(-10px) rotate(-15deg) scale(1.05); opacity: 1; }
+      100% { transform: translateX(0) rotate(0deg) scale(1); opacity: 1; }
+    }
+    .rolling-tumble {
+      animation: tumble 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+    button:hover { background: #1d4ed8; }
+    button.active { background: #16a34a; }
+    button.danger { background: #dc2626; }
+    .pairs-display {
+      background: #27272a;
+      padding: 12px;
+      border-radius: 6px;
+      font-size: 13px;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    .pair-tag {
+      display: inline-block;
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-weight: 600;
+      font-size: 12px;
+      margin-right: 4px;
+      margin-bottom: 4px;
+    }
+    .tag-white { background: rgba(234, 179, 8, 0.2); color: #eab308; border: 1px solid #eab308; }
+    .tag-black { background: rgba(168, 85, 247, 0.2); color: #c084fc; border: 1px solid #a855f7; }
+    .calib-banner {
+      width: 100%;
+      max-width: 1280px;
+      background: #b91c1c;
+      color: white;
+      padding: 8px 14px;
+      border-radius: 6px;
+      margin-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+    }
+
+    #intro-modal {
+      position: fixed;
+      top: 0; left: 0; width: 100vw; height: 100vh;
+      background: rgba(9, 9, 11, 0.95);
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      backdrop-filter: blur(8px);
+      transition: opacity 0.4s ease;
+    }
+    .intro-card-container {
+      position: relative;
+      width: 280px;
+      height: 380px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: #18181b;
+      border: 3px solid #3f3f46;
+      border-radius: 16px;
+      box-shadow: 0 12px 36px rgba(0,0,0,0.8);
+      overflow: hidden;
+    }
+    .intro-card-container.boss-glow {
+      border-color: #dc2626;
+      box-shadow: 0 0 30px rgba(220, 38, 38, 0.6);
+      animation: pulseGlow 1.5s infinite alternate;
+    }
+    @keyframes pulseGlow {
+      from { box-shadow: 0 0 15px rgba(220, 38, 38, 0.4); }
+      to { box-shadow: 0 0 35px rgba(234, 179, 8, 0.8); }
+    }
+    .intro-img {
+      max-width: 85%;
+      max-height: 240px;
+      object-fit: contain;
+      filter: drop-shadow(0 4px 12px rgba(0,0,0,0.5));
+      transition: transform 0.3s ease;
+    }
+    .intro-title {
+      font-size: 20px;
+      font-weight: 800;
+      margin-top: 16px;
+      color: #f4f4f5;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+    }
+    .intro-subtitle {
+      font-size: 13px;
+      color: #a1a1aa;
+      margin-top: 4px;
+    }
+    .intro-flavor {
+      margin-top: 20px;
+      font-size: 15px;
+      color: #e4e4e7;
+      text-align: center;
+      max-width: 400px;
+      line-height: 1.4;
+      font-weight: 500;
+    }
+    .intro-start-btn {
+      margin-top: 24px;
+      padding: 12px 32px;
+      font-size: 16px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #2563eb, #1d4ed8);
+      border-radius: 30px;
+      box-shadow: 0 4px 16px rgba(37, 99, 235, 0.4);
+      transition: transform 0.2s, background 0.2s;
+    }
+
+    #rules-modal {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; 
+      width: 100vw; height: 100vh;
+      background: rgba(9, 9, 11, 0.94);
+      z-index: 10001;
+      justify-content: center;
+      align-items: center;
+      padding: 8px;
+      backdrop-filter: blur(6px);
+    }
+    .rules-card {
+      background: #18181b;
+      border: 1px solid #3f3f46;
+      border-radius: 10px;
+      width: 100%;
+      max-width: 680px;
+      height: 94vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 16px 48px rgba(0, 0, 0, 0.8);
+      overflow: hidden;
+    }
+    .rules-header {
+      padding: 8px 14px;
+      background: #27272a;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1px solid #3f3f46;
+      flex-shrink: 0;
+      height: 44px;
+    }
+    .rules-header h3 {
+      font-size: 15px;
+      color: #f4f4f5;
+      font-weight: 700;
+    }
+    .rules-body {
+      flex: 1;
+      padding: 8px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+    .rule-accordion-item {
+      background: #27272a;
+      border-radius: 6px;
+      overflow: hidden;
+      border: 1px solid #3f3f46;
+      flex-shrink: 0;
+    }
+    .rule-accordion-header {
+      width: 100% !important;
+      height: auto !important;
+      min-height: 36px !important;
+      padding: 8px 12px !important;
+      background: #27272a !important;
+      color: #38bdf8 !important;
+      font-size: 13px !important;
+      font-weight: 700 !important;
+      text-align: left !important;
+      border: none !important;
+      border-radius: 0 !important;
+      display: flex !important;
+      justify-content: space-between !important;
+      align-items: center !important;
+      line-height: 1.2 !important;
+      cursor: pointer;
+    }
+    .rule-accordion-header:hover { background: #3f3f46 !important; }
+    .rule-accordion-content {
+      display: none;
+      padding: 8px 12px;
+      font-size: 12px;
+      line-height: 1.4;
+      color: #d4d4d8;
+      background: #18181b;
+      border-top: 1px solid #3f3f46;
+    }
+    .rule-accordion-content ul { padding-left: 16px; margin-top: 2px; }
+    .rule-accordion-content li { margin-bottom: 4px; }
+
+    @media (pointer: coarse) {
+      #btn-admin-auth, #btn-mode { display: none !important; }
+    }
+    @media (pointer: coarse), (max-width: 1366px) {
+      body { padding: 6px; }
+      header { padding: 8px 12px; margin-bottom: 6px; }
+      header h2 { font-size: 16px; }
+      .header-controls button, .color-picker-container {
+        padding: 5px 8px;
+        font-size: 12px;
+        border-radius: 20px;
+      }
+      #rollButton { padding: 16px 20px; font-size: 18px; border-radius: 10px; }
+      .main-layout { gap: 10px; }
+      .panel { width: 260px; padding: 12px; gap: 10px; }
+      .die { width: 38px; height: 38px; }
+      .pip-grid { width: 30px; height: 30px; }
+      .pip, .pip-empty { width: 6px; height: 6px; }
+    }
+    @media (max-width: 1366px) and (orientation: portrait) {
+      #rotate-notice { display: flex; }
+    }
+    @media (max-height: 500px) and (orientation: landscape) {
+      #rules-modal { padding: 4px !important; }
+      .rules-card { height: 98vh !important; border-radius: 6px !important; }
+      .rules-header { height: 36px !important; padding: 4px 10px !important; }
+      .rules-header h3 { font-size: 13px !important; }
+      .rule-accordion-header { min-height: 32px !important; padding: 6px 10px !important; font-size: 12px !important; }
+      .rule-accordion-content { font-size: 11px !important; padding: 6px 10px !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div id="rotate-notice">
+    <div class="rotate-icon">🔄</div>
+    <h2 style="font-size: 20px; font-weight: 700; margin-bottom: 8px;">Please Rotate Your Device</h2>
+    <p style="font-size: 14px; color: #a1a1aa; max-width: 280px;">This game is designed for landscape mode. Rotate your tablet or phone sideways to continue!</p>
+  </div>
+
+  <div id="intro-modal">
+    <div id="intro-card" class="intro-card-container">
+      <img id="intro-monster-img" class="intro-img" src="" alt="Monster">
+      <div id="intro-monster-name" class="intro-title">Loading...</div>
+      <div id="intro-monster-sub" class="intro-subtitle"></div>
+    </div>
+    <div id="intro-flavor-text" class="intro-flavor">Prepare to enter the realm of Annoyed Animals!</div>
+    <button id="intro-btn" class="intro-start-btn" style="display:none;" onclick="closeIntroModal()">⚔️ START GAME</button>
+  </div>
+
+  <div id="rules-modal">
+    <div class="rules-card">
+      <div class="rules-header">
+        <h3>📜 Dungeons, Dice & Danger - Quick Rules</h3>
+        <button onclick="toggleRulesModal()" style="background:#dc2626; padding:6px 12px;">✖ Close</button>
+      </div>
+      <div class="rules-body">
+        <div class="rule-accordion-item">
+          <button class="rule-accordion-header" onclick="toggleAccordion(this)">1. Objective & Setup <span>▼</span></button>
+          <div class="rule-accordion-content">
+            <ul>
+              <li><strong>Objective:</strong> Players use dice to travel through Dungeons, fight Monsters, and collect Treasure to earn the highest total Victory points.</li>
+              <li><strong>Setup:</strong> Each player takes an Adventure sheet and pencil. Players choose one of 4 Dungeon maps.</li>
+              <li><strong>Dice Pool:</strong> Uses 5 dice total: 4 White dice and 1 Black die.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="rule-accordion-item">
+          <button class="rule-accordion-header" onclick="toggleAccordion(this)">2. Round Structure & Dice Pairing <span>▼</span></button>
+          <div class="rule-accordion-content">
+            <ul>
+              <li><strong>Rolling:</strong> Active player rolls all 5 dice into the center for everyone to see.</li>
+              <li><strong>Forming Pairs:</strong> Every player builds 2 pairs of dice combinations and calculates the sum of each pair.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="rule-accordion-item">
+          <button class="rule-accordion-header" onclick="toggleAccordion(this)">3. Dungeon Movement & Penalties <span>▼</span></button>
+          <div class="rule-accordion-content">
+            <ul>
+              <li><strong>Marking Spaces:</strong> Sum your 2 dice pairs and cross off 2 corresponding numbered spaces on your sheet per round.</li>
+              <li><strong>Adjacency Rule:</strong> Subsequent spaces can only be marked if they are connected by a valid path to a previously visited space.</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <header>
+    <h2>Dungeons, Dice & Danger Engine <span class="version-tag">v1.0.4-complete</span></h2>
+    <div class="header-controls">
+      <button onclick="toggleRulesModal()" style="background: #0284c7;">📜 How to Play</button>
+      
+      <div class="color-picker-container">
+        <span>Cross:</span>
+        <select id="cross-color-select" onchange="changePlayerColor(this.value)">
+          <option value="#dc2626" selected>🔴 Red</option>
+          <option value="#2563eb">🔵 Blue</option>
+          <option value="#16a34a">🟢 Green</option>
+          <option value="#9333ea">🟣 Purple</option>
+          <option value="#0f172a">⚫ Black</option>
+          <option value="#64748b">⚪ Grey</option>
+          <option value="#0d9488">🔵 Teal</option>
+          <option value="#78350f">🟤 Brown</option>
+        </select>
+      </div>
+
+      <button id="btn-adjacency" onclick="toggleStrictAdjacency()" style="background: #16a34a;">🌐 Adjacency: ON</button>
+      <button onclick="undoLastAction()">↩ Undo Action</button>
+      <button onclick="undoDiceRoll()">🎲 Previous Dice Roll</button>
+      <button id="btn-eraser" onclick="toggleEraserMode()" style="background: #475569;">🔒 Eraser: OFF</button>
+      <button id="btn-freemark" onclick="toggleFreeMarkMode()" style="background: #475569;">✏️ Free Mark: OFF</button>
+      
+      <button id="btn-admin-auth" onclick="promptAdminPassword()" style="background: #334155;">🔐 Admin</button>
+      <button id="btn-mode" onclick="toggleCalibration()" style="display: none; background: #2563eb;">🔧 Toggle Calibration Mode</button>
+
+      <button onclick="clearMarks()" class="danger">Reset Game</button>
+    </div>
+  </header>
+
+  <div id="reward-banner" class="banner-notification"></div>
+
+  <div id="calib-banner" class="calib-banner" style="display: none;">
+    <span>
+      <strong>CALIBRATION EDIT MODE:</strong> 
+      <button id="btn-lock-edit" onclick="toggleEditLock()" style="background:#2563eb; color:#fff; margin-left:10px; padding:3px 8px; font-size:12px;">✏️ Edit/Delete: ENABLED</button>
+    </span>
+    <button onclick="exportPoints()" style="background:#fff; color:#000;">📋 Copy JSON Data</button>
+  </div>
+
+  <div class="main-layout">
+    <div id="game-container">
+      <img id="board-img" src="https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/Scan_20261031_124717.jpg" alt="Board">
+      <canvas id="overlay-canvas"></canvas>
+    </div>
+
+    <div class="panel">
+      <button id="rollButton" onclick="rollDice()">🎲 Roll 5 Dice</button>
+
+      <div class="dice-group" id="diceTray"></div>
+      <div id="dice-duplicate-note" style="min-height: 20px; font-size: 11px; text-align: center; font-weight: 600; margin-top: 4px;"></div>
+
+      <hr style="border-color: #3f3f46;">
+
+      <h3>Available Pairs</h3>
+      <div id="pairs-container" class="pairs-display">Roll dice to see available combinations.</div>
+    </div>
+  </div>
+
+  <script>
+    // ==========================================
+    // HIDDEN GRAPH ACCESSIBILITY MAP (UNDER THE HOOD)
+    // ==========================================
+    let boardConnections = {
+      "node_3": ["node_4", "node_20"],
+      "node_4": ["node_3", "node_5", "node_21"],
+      "node_53": ["node_6", "node_17", "node_7"],
+      "node_6": ["node_53", "node_5", "node_7"],
+      "node_5": ["node_6", "node_4", "node_21"],
+      "node_20": ["node_3", "node_75"],
+      "node_75": ["node_20", "node_16", "node_17", "node_21"],
+      "node_37": ["node_44", "node_16"],
+      "node_44": ["node_37"],
+      "node_16": ["node_37", "node_15", "node_75"],
+      "node_15": ["node_16", "node_50", "node_14"],
+      "node_50": ["node_15", "node_38", "node_94"],
+      "node_38": ["node_50", "node_17"],
+      "node_17": ["node_38", "node_75", "node_53"],
+      "node_7": ["node_6", "node_53", "node_54"],
+      "node_21": ["node_4", "node_5", "node_75"],
+      "node_54": ["node_7", "node_29", "node_40"],
+      "node_29": ["node_54", "node_51"],
+      "node_40": ["node_54", "node_68"],
+      "node_51": ["node_29", "node_94", "node_67"],
+      "node_94": ["node_51", "node_50", "node_49", "node_43", "node_18"],
+      "node_49": ["node_94", "node_14", "node_mvzzu13caq58w"],
+      "node_68": ["node_40", "node_67", "node_69"],
+      "node_67": ["node_68", "node_51", "node_66"],
+      "node_69": ["node_68", "node_42", "node_77"],
+      "node_42": ["node_69"],
+      "node_77": ["node_69", "node_66", "node_65"],
+      "node_66": ["node_67", "node_77", "node_65"],
+      "node_65": ["node_77", "node_66", "node_64", "node_43"],
+      "node_64": ["node_65", "node_43", "node_82"],
+      "node_43": ["node_64", "node_94", "node_65", "node_82"],
+      "node_82": ["node_64", "node_63", "node_43"],
+      "node_63": ["node_82", "node_48"],
+      "node_48": ["node_63", "node_62", "node_88"],
+      "node_62": ["node_48", "node_88", "node_41"],
+      "node_88": ["node_62", "node_70", "node_48"],
+      "node_70": ["node_88", "node_55"],
+      "node_55": ["node_70", "node_45", "node_41"],
+      "node_45": ["node_55"],
+      "node_41": ["node_55", "node_62", "node_61"],
+      "node_61": ["node_41", "node_60"],
+      "node_60": ["node_61", "node_107"],
+      "node_107": ["node_60", "node_22", "node_23", "node_12"],
+      "node_22": ["node_107", "node_9", "node_59", "node_46"],
+      "node_9": ["node_22", "node_10", "node_8"],
+      "node_59": ["node_22", "node_10", "node_46"],
+      "node_10": ["node_59", "node_9"],
+      "node_8": ["node_9", "node_2", "node_23"],
+      "node_2": ["node_8", "node_1", "node_23", "node_47"],
+      "node_1": ["node_2", "node_0", "node_52"],
+      "node_0": ["node_1", "node_52"],
+      "node_52": ["node_0", "node_1", "node_28"],
+      "node_23": ["node_2", "node_47", "node_107", "node_8"],
+      "node_47": ["node_23", "node_11", "node_2"],
+      "node_46": ["node_22", "node_59", "node_57", "node_56"],
+      "node_57": ["node_46"],
+      "node_56": ["node_46"],
+      "node_12": ["node_107", "node_39", "node_30"],
+      "node_39": ["node_12", "node_30", "node_58"],
+      "node_30": ["node_39", "node_mvzzu13caq58w", "node_12"],
+      "node_58": ["node_39", "node_18"],
+      "node_18": ["node_58", "node_94"],
+      "node_14": ["node_49", "node_15", "node_13"],
+      "node_13": ["node_14", "node_36", "node_19"],
+      "node_36": ["node_13"],
+      "node_19": ["node_13", "node_28", "node_11"],
+      "node_28": ["node_19", "node_52", "node_11", "node_112"],
+      "node_11": ["node_28", "node_19", "node_47"],
+      "node_mvzzu13caq58w": ["node_30", "node_49"],
+      "node_112": ["node_28"]
+    };
+
+    let points = [
+      { "label": "start_2", "x": 0.202, "y": 0.0783, "id": "node_0", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_9", "x": 0.2008, "y": 0.1422, "id": "node_1", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_6", "x": 0.2002, "y": 0.2133, "id": "node_2", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_4", "x": 0.6887, "y": 0.1269, "id": "node_3", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_5", "x": 0.7149, "y": 0.1944, "id": "node_4", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_8", "x": 0.7137, "y": 0.2637, "id": "node_5", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_10", "x": 0.6997, "y": 0.334, "id": "node_6", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_11", "x": 0.6991, "y": 0.3988, "id": "node_7", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_7", "x": 0.1575, "y": 0.2565, "id": "node_8", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_3", "x": 0.1099, "y": 0.2979, "id": "node_9", "marked": false, "state": 0, "textValue": "" },
+      { "label": "start_12", "x": 0.0617, "y": 0.2988, "id": "node_10", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_7", "x": 0.2966, "y": 0.2232, "id": "node_11", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_9", "x": 0.2703, "y": 0.3889, "id": "node_12", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_10", "x": 0.3893, "y": 0.2574, "id": "node_13", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_9", "x": 0.4387, "y": 0.3069, "id": "node_14", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_6", "x": 0.482, "y": 0.306, "id": "node_15", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_8", "x": 0.5289, "y": 0.261, "id": "node_16", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_7", "x": 0.6009, "y": 0.3322, "id": "node_17", "marked": false, "state": 0, "textValue": "" },
+      { "label": "boss_unlock_5", "x": 0.3825, "y": 0.515, "id": "node_18", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_unlock_3", "x": 0.3447, "y": 0.2223, "id": "node_19", "marked": false, "state": 0, "textValue": "" },
+      { "label": "green_growler_unlock_3", "x": 0.643, "y": 0.1242, "id": "node_20", "marked": false, "state": 0, "textValue": "" },
+      { "label": "green_growler_unlock_9", "x": 0.668, "y": 0.2322, "id": "node_21", "marked": false, "state": 0, "textValue": "" },
+      { "label": "grey_hound_unlock_6", "x": 0.1294, "y": 0.3692, "id": "node_22", "marked": false, "state": 0, "textValue": "" },
+      { "label": "grey_hound_unlock_10", "x": 0.1996, "y": 0.2782, "id": "node_23", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_1", "x": 0.3551, "y": 0.0684, "id": "node_24", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_2", "x": 0.3545, "y": 0.0882, "id": "node_25", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_3", "x": 0.3551, "y": 0.1107, "id": "node_26", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_final", "x": 0.3545, "y": 0.1332, "id": "node_27", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_target", "x": 0.305, "y": 0.1, "id": "node_28", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gold_3", "x": 0.6625, "y": 0.5196, "id": "node_29", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gold_11", "x": 0.3173, "y": 0.3558, "id": "node_30", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_hp_activator", "x": 0.8924, "y": 0.1621, "id": "node_31", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_activator", "x": 0.8997, "y": 0.4637, "id": "node_32", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_hp_1", "x": 0.8918, "y": 0.2287, "id": "node_33", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_hp_2", "x": 0.9247, "y": 0.2269, "id": "node_34", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_hp_3", "x": 0.9546, "y": 0.2278, "id": "node_35", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_12", "x": 0.4112, "y": 0.1657, "id": "node_36", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_2", "x": 0.5039, "y": 0.1981, "id": "node_37", "marked": false, "state": 0, "textValue": "" },
+      { "label": "double_door", "x": 0.5576, "y": 0.3516, "id": "node_38", "marked": false, "state": 0, "textValue": "" },
+      { "label": "double_door", "x": 0.3172, "y": 0.411, "id": "node_39", "marked": false, "state": 0, "textValue": "" },
+      { "label": "double_door", "x": 0.724, "y": 0.5408, "id": "node_40", "marked": false, "state": 0, "textValue": "" },
+      { "label": "double_door", "x": 0.2441, "y": 0.5987, "id": "node_41", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_double_2", "x": 0.7578, "y": 0.7034, "id": "node_42", "marked": false, "state": 0, "textValue": "" },
+      { "label": "boss_unlock_fist_double_8", "x": 0.5248, "y": 0.6315, "id": "node_43", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_double_12", "x": 0.4877, "y": 0.1217, "id": "node_44", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_double_6", "x": 0.153, "y": 0.6331, "id": "node_45", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_double_4", "x": 0.1053, "y": 0.4313, "id": "node_46", "marked": false, "state": 0, "textValue": "" },
+      { "label": "double_door", "x": 0.2504, "y": 0.2546, "id": "node_47", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_unlock_8", "x": 0.3362, "y": 0.6268, "id": "node_48", "marked": false, "state": 0, "textValue": "" },
+      { "label": "boss_unlock_3", "x": 0.4093, "y": 0.3672, "id": "node_49", "marked": false, "state": 0, "textValue": "" },
+      { "label": "boss_unlock_11", "x": 0.5121, "y": 0.3656, "id": "node_50", "marked": false, "state": 0, "textValue": "" },
+      { "label": "boss_unlock_4", "x": 0.6191, "y": 0.5439, "id": "node_51", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_unlock_4", "x": 0.2473, "y": 0.1248, "id": "node_52", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_2", "x": 0.6487, "y": 0.3625, "id": "node_53", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_12", "x": 0.7218, "y": 0.472, "id": "node_54", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_2", "x": 0.1996, "y": 0.6315, "id": "node_55", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_2", "x": 0.1223, "y": 0.5142, "id": "node_56", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_space_12", "x": 0.0788, "y": 0.5158, "id": "node_57", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_10", "x": 0.3373, "y": 0.4798, "id": "node_58", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_5", "x": 0.082, "y": 0.3672, "id": "node_59", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_5", "x": 0.2134, "y": 0.4861, "id": "node_60", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_7", "x": 0.2579, "y": 0.5267, "id": "node_61", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_6", "x": 0.2907, "y": 0.6268, "id": "node_62", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_7", "x": 0.3829, "y": 0.6565, "id": "node_63", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_6", "x": 0.5248, "y": 0.6956, "id": "node_64", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_10", "x": 0.5714, "y": 0.6722, "id": "node_65", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_9", "x": 0.617, "y": 0.6456, "id": "node_66", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_7", "x": 0.6646, "y": 0.5893, "id": "node_67", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_9", "x": 0.7081, "y": 0.608, "id": "node_68", "marked": false, "state": 0, "textValue": "" },
+      { "label": "path_8", "x": 0.7165, "y": 0.6737, "id": "node_69", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_unlock_5", "x": 0.2282, "y": 0.7285, "id": "node_70", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Green_growler_1", "x": 0.635, "y": 0.1748, "id": "node_71", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Green_growler_2", "x": 0.635, "y": 0.1967, "id": "node_72", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Green_growler_3", "x": 0.635, "y": 0.2202, "id": "node_73", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Green_growler_final", "x": 0.6339, "y": 0.2437, "id": "node_74", "marked": false, "state": 0, "textValue": "" },
+      { "label": "green_growler_target", "x": 0.585, "y": 0.2, "id": "node_75", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_1", "x": 0.6667, "y": 0.6987, "id": "node_76", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_target", "x": 0.62, "y": 0.73, "id": "node_77", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_2", "x": 0.6798, "y": 0.6965, "id": "node_78", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_3", "x": 0.6798, "y": 0.7199, "id": "node_79", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_4", "x": 0.6787, "y": 0.7403, "id": "node_80", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_final", "x": 0.6808, "y": 0.7637, "id": "node_81", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_target", "x": 0.4319, "y": 0.6902, "id": "node_82", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_1", "x": 0.4753, "y": 0.6542, "id": "node_83", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_2", "x": 0.4902, "y": 0.6527, "id": "node_84", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_3", "x": 0.4912, "y": 0.6777, "id": "node_85", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_4", "x": 0.4902, "y": 0.6965, "id": "node_86", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_final", "x": 0.4902, "y": 0.7199, "id": "node_87", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_target", "x": 0.2751, "y": 0.709, "id": "node_88", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_1", "x": 0.3217, "y": 0.6793, "id": "node_89", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_2", "x": 0.3355, "y": 0.6793, "id": "node_90", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_3", "x": 0.3355, "y": 0.7012, "id": "node_91", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_4", "x": 0.3355, "y": 0.7262, "id": "node_92", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_final", "x": 0.3366, "y": 0.7449, "id": "node_93", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_target", "x": 0.4711, "y": 0.4791, "id": "node_94", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_1", "x": 0.5654, "y": 0.4228, "id": "node_95", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_2", "x": 0.5664, "y": 0.4431, "id": "node_96", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_3", "x": 0.5654, "y": 0.4666, "id": "node_97", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_4", "x": 0.5834, "y": 0.4212, "id": "node_98", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_5", "x": 0.5834, "y": 0.4416, "id": "node_99", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_6", "x": 0.5823, "y": 0.4666, "id": "node_100", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_7", "x": 0.5654, "y": 0.4947, "id": "node_101", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_8", "x": 0.5664, "y": 0.5151, "id": "node_102", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_9", "x": 0.5664, "y": 0.5338, "id": "node_103", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_10", "x": 0.5834, "y": 0.4947, "id": "node_104", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_11", "x": 0.5834, "y": 0.5151, "id": "node_105", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Beefy_bearpion_Boss_12", "x": 0.5834, "y": 0.5354, "id": "node_106", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Grey_hound_target", "x": 0.1766, "y": 0.3696, "id": "node_107", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Grey_hound_1", "x": 0.237, "y": 0.3274, "id": "node_108", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Grey_hound_2", "x": 0.237, "y": 0.3524, "id": "node_109", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Grey_hound_3", "x": 0.237, "y": 0.3759, "id": "node_110", "marked": false, "state": 0, "textValue": "" },
+      { "label": "Grey_hound_4", "x": 0.237, "y": 0.3962, "id": "node_111", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_double_10", "x": 0.3874, "y": 0.0584, "id": "node_112", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_torch_activator", "x": 0.9022, "y": 0.3149, "id": "node_113", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_torch_1", "x": 0.9096, "y": 0.3837, "id": "node_114", "marked": false, "state": 0, "textValue": "" },
+      { "label": "perk_torch_2", "x": 0.9414, "y": 0.3806, "id": "node_115", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_1", "x": 0.8927, "y": 0.5291, "id": "node_116", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_2", "x": 0.9234, "y": 0.526, "id": "node_117", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_3", "x": 0.9552, "y": 0.5291, "id": "node_118", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_free_1", "x": 0.8906, "y": 0.5995, "id": "node_119", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_free_2", "x": 0.9245, "y": 0.5979, "id": "node_120", "marked": false, "state": 0, "textValue": "" },
+      { "label": "black_dice_free_3", "x": 0.9584, "y": 0.5995, "id": "node_121", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_1", "x": 0.8408, "y": 0.0944, "id": "node_122", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_2", "x": 0.8408, "y": 0.135, "id": "node_123", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_3", "x": 0.8408, "y": 0.1898, "id": "node_124", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_4", "x": 0.8408, "y": 0.2398, "id": "node_125", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_5", "x": 0.8408, "y": 0.293, "id": "node_126", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_6", "x": 0.8408, "y": 0.343, "id": "node_127", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_7", "x": 0.8397, "y": 0.3915, "id": "node_128", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_8", "x": 0.8408, "y": 0.4462, "id": "node_129", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_9", "x": 0.8418, "y": 0.4916, "id": "node_130", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_point_final_death", "x": 0.8408, "y": 0.5432, "id": "node_131", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_1", "x": 0.0622, "y": 0.8832, "id": "node_132", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_2", "x": 0.0887, "y": 0.8816, "id": "node_133", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_3", "x": 0.1141, "y": 0.8832, "id": "node_134", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_4", "x": 0.0738, "y": 0.9238, "id": "node_135", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_final", "x": 0.1003, "y": 0.9207, "id": "node_136", "marked": false, "state": 0, "textValue": "" },
+      { "label": "green_growler_reward_1st", "x": 0.5708, "y": 0.2805, "id": "node_137", "marked": false, "state": 0, "textValue": "" },
+      { "label": "green_growler_reward_sub", "x": 0.5931, "y": 0.282, "id": "node_138", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_reward_sub", "x": 0.3155, "y": 0.1741, "id": "node_139", "marked": false, "state": 0, "textValue": "" },
+      { "label": "purple_pup_reward_1st", "x": 0.288, "y": 0.171, "id": "node_140", "marked": false, "state": 0, "textValue": "" },
+      { "label": "grey_hound_reward_1st", "x": 0.1704, "y": 0.4369, "id": "node_141", "marked": false, "state": 0, "textValue": "" },
+      { "label": "grey_hound_reward_sub", "x": 0.1937, "y": 0.4353, "id": "node_142", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_reward_1st", "x": 0.6132, "y": 0.8085, "id": "node_143", "marked": false, "state": 0, "textValue": "" },
+      { "label": "punk_hare_reward_sub", "x": 0.6365, "y": 0.81, "id": "node_144", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_reward_1st", "x": 0.4225, "y": 0.7616, "id": "node_145", "marked": false, "state": 0, "textValue": "" },
+      { "label": "primal_hare_reward_sub", "x": 0.45, "y": 0.7616, "id": "node_146", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_reward_1st", "x": 0.2678, "y": 0.7866, "id": "node_147", "marked": false, "state": 0, "textValue": "" },
+      { "label": "white_wolf_reward_sub", "x": 0.2912, "y": 0.785, "id": "node_148", "marked": false, "state": 0, "textValue": "" },
+      { "label": "boss_reward_1st", "x": 0.4299, "y": 0.5786, "id": "node_149", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_1", "x": 0.3241, "y": 0.8785, "id": "node_150", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_2", "x": 0.349, "y": 0.8785, "id": "node_151", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_3", "x": 0.374, "y": 0.8785, "id": "node_152", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_4", "x": 0.399, "y": 0.8785, "id": "node_153", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_5", "x": 0.4239, "y": 0.8785, "id": "node_154", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_6", "x": 0.4488, "y": 0.8785, "id": "node_155", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_7", "x": 0.4738, "y": 0.8785, "id": "node_156", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_8", "x": 0.4988, "y": 0.8785, "id": "node_157", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_9", "x": 0.5237, "y": 0.8785, "id": "node_158", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_10", "x": 0.5486, "y": 0.8785, "id": "node_159", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_11", "x": 0.5736, "y": 0.8785, "id": "node_160", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_12", "x": 0.5985, "y": 0.8785, "id": "node_161", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_13", "x": 0.6235, "y": 0.8785, "id": "node_162", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_14", "x": 0.6484, "y": 0.8785, "id": "node_163", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_15", "x": 0.6734, "y": 0.8785, "id": "node_164", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_16", "x": 0.3241, "y": 0.9148, "id": "node_165", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_17", "x": 0.349, "y": 0.9148, "id": "node_166", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_18", "x": 0.374, "y": 0.9148, "id": "node_167", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_19", "x": 0.399, "y": 0.9148, "id": "node_168", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_20", "x": 0.4239, "y": 0.9148, "id": "node_169", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_21", "x": 0.4488, "y": 0.9148, "id": "node_170", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_22", "x": 0.4738, "y": 0.9148, "id": "node_171", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_23", "x": 0.4988, "y": 0.9148, "id": "node_172", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_24", "x": 0.5237, "y": 0.9148, "id": "node_173", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_25", "x": 0.5486, "y": 0.9148, "id": "node_174", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_26", "x": 0.5736, "y": 0.9148, "id": "node_175", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_27", "x": 0.5985, "y": 0.9148, "id": "node_176", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_28", "x": 0.6235, "y": 0.9148, "id": "node_177", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_29", "x": 0.6484, "y": 0.9148, "id": "node_178", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_30", "x": 0.6734, "y": 0.9148, "id": "node_179", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_31", "x": 0.3241, "y": 0.9524, "id": "node_180", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_32", "x": 0.349, "y": 0.9524, "id": "node_181", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_33", "x": 0.374, "y": 0.9524, "id": "node_182", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_34", "x": 0.399, "y": 0.9524, "id": "node_183", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_35", "x": 0.4239, "y": 0.9524, "id": "node_184", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_36", "x": 0.4488, "y": 0.9524, "id": "node_185", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_37", "x": 0.4738, "y": 0.9524, "id": "node_186", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_38", "x": 0.4988, "y": 0.9524, "id": "node_187", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_39", "x": 0.5237, "y": 0.9524, "id": "node_188", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_40", "x": 0.5486, "y": 0.9524, "id": "node_189", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_41", "x": 0.5736, "y": 0.9524, "id": "node_190", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_42", "x": 0.5985, "y": 0.9524, "id": "node_191", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_43", "x": 0.6235, "y": 0.9524, "id": "node_192", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_44", "x": 0.6484, "y": 0.9524, "id": "node_193", "marked": false, "state": 0, "textValue": "" },
+      { "label": "gem_45", "x": 0.6734, "y": 0.9524, "id": "node_194", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_reward_first", "x": 0.0728, "y": 0.9604, "id": "node_195", "marked": false, "state": 0, "textValue": "" },
+      { "label": "fist_reward_sub", "x": 0.1088, "y": 0.9604, "id": "node_196", "marked": false, "state": 0, "textValue": "" },
+      { "label": "connect_reward_first", "x": 0.2116, "y": 0.9557, "id": "node_197", "marked": false, "state": 0, "textValue": "" },
+      { "label": "connect_reward_sub", "x": 0.2497, "y": 0.9589, "id": "node_198", "marked": false, "state": 0, "textValue": "" },
+      { "label": "life_loss_points", "x": 0.7296, "y": 0.926, "id": "node_199", "marked": false, "state": 0, "textValue": "" },
+      { "label": "total_points", "x": 0.7974, "y": 0.9229, "id": "node_200", "marked": false, "state": 0, "textValue": "" },
+      { "id": "node_mvzzu13caq58w", "label": "gem_space_12", "x": 0.3642, "y": 0.3389, "marked": false, "state": 0, "textValue": "" }
+    ];
+
+    // ==========================================
+    // GAME ENGINE CORE
+    // ==========================================
+    let calibrationMode = false;
+    let allowEditingPoints = true;
+    let eraserMode = false;
+    let freeMarkMode = false;
+    let strictAdjacencyMode = true;
+    let isRolling = false;
+    let playerColor = "#dc2626";
+    let markHistory = [];
+    let diceRollHistory = [];
+
+    let poolDice = [];
+    let selectedDiceIds = [];
+
+    const showcaseMonsters = [
+      {
+        name: "Purple Pup",
+        sub: "Level 1 Creature",
+        img: "https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/monster_purple_pup.png",
+        isBoss: false
+      },
+      {
+        name: "Green Growler",
+        sub: "Level 2 Beast",
+        img: "https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/monster_green_growler.png",
+        isBoss: false
+      },
+      {
+        name: "Beefy Bearpion",
+        sub: "Dungeon Boss",
+        img: "https://raw.githubusercontent.com/happypooya/Dice-and-Danger/main/monster_boss.png",
+        isBoss: true
+      }
+    ];
+
+    function startIntroShowcase() {
+      const modal = document.getElementById('intro-modal');
+      const card = document.getElementById('intro-card');
+      const imgEl = document.getElementById('intro-monster-img');
+      const nameEl = document.getElementById('intro-monster-name');
+      const subEl = document.getElementById('intro-monster-sub');
+      const flavorEl = document.getElementById('intro-flavor-text');
+      const btn = document.getElementById('intro-btn');
+
+      modal.style.display = 'flex';
+      modal.style.opacity = '1';
+      btn.style.display = 'none';
+      card.classList.remove('boss-glow');
+      flavorEl.textContent = "Scouting dungeon creatures...";
+
+      let index = 0;
+
+      function showNext() {
+        if (index < showcaseMonsters.length) {
+          const m = showcaseMonsters[index];
+          imgEl.src = m.img;
+          nameEl.textContent = m.name;
+          subEl.textContent = m.sub;
+
+          if (m.isBoss) {
+            card.classList.add('boss-glow');
+            nameEl.style.color = '#ef4444';
+            flavorEl.textContent = "FINAL BOSS SPOTTED! Defeat all the monsters to conquer the realm!";
+
+            const isMobileOrTablet = window.innerWidth <= 1366;
+            if (isMobileOrTablet) {
+              btn.style.display = 'none';
+              setTimeout(() => { closeIntroModal(); }, 1500);
+            } else {
+              btn.style.display = 'block';
+            }
+          } else {
+            card.classList.remove('boss-glow');
+            nameEl.style.color = '#f4f4f5';
+            index++;
+            setTimeout(showNext, 1200);
+          }
+        }
+      }
+
+      showNext();
+    }
+
+    function closeIntroModal() {
+      const modal = document.getElementById('intro-modal');
+      modal.style.opacity = '0';
+      setTimeout(() => { modal.style.display = 'none'; }, 400);
+    }
+
+    function toggleRulesModal() {
+      const modal = document.getElementById('rules-modal');
+      modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
+    }
+
+    function toggleAccordion(btn) {
+      const content = btn.nextElementSibling;
+      const arrow = btn.querySelector('span');
+      const isOpening = content.style.display !== 'block';
+      
+      document.querySelectorAll('.rule-accordion-content').forEach(el => { el.style.display = 'none'; });
+      document.querySelectorAll('.rule-accordion-header span').forEach(el => { el.textContent = '▼'; });
+
+      if (isOpening) {
+        content.style.display = 'block';
+        arrow.textContent = '▲';
+      }
+    }
+
+    function changePlayerColor(colorHex) {
+      playerColor = colorHex;
+      redraw();
+    }
+
+    function promptAdminPassword() {
+      const pwd = prompt("Enter Admin Password:");
+      if (pwd === "1364") {
+        calibrationMode = true;
+        document.getElementById('btn-mode').style.display = 'inline-block';
+        document.getElementById('calib-banner').style.display = 'flex';
+        alert("Admin unlocked! Calibration mode available in top header.");
+        redraw();
+      } else if (pwd !== null) {
+        alert("Incorrect password.");
+      }
+    }
+
+    function toggleCalibration() {
+      calibrationMode = !calibrationMode;
+      const btn = document.getElementById('btn-mode');
+      btn.style.background = calibrationMode ? '#16a34a' : '#2563eb';
+      btn.textContent = calibrationMode ? '🔧 Calibration: ON' : '🔧 Toggle Calibration Mode';
+      document.getElementById('calib-banner').style.display = calibrationMode ? 'flex' : 'none';
+      redraw();
+    }
+
+    function toggleEditLock() {
+      allowEditingPoints = !allowEditingPoints;
+      const btn = document.getElementById('btn-lock-edit');
+      btn.style.background = allowEditingPoints ? '#2563eb' : '#dc2626';
+      btn.textContent = allowEditingPoints ? '✏️ Edit/Delete: ENABLED' : '🔒 Edit/Delete: LOCKED';
+    }
+
+    function exportPoints() {
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(points, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", "points_calibrated.json");
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+    }
+
+    function toggleStrictAdjacency() {
+      strictAdjacencyMode = !strictAdjacencyMode;
+      const btn = document.getElementById('btn-adjacency');
+      if (strictAdjacencyMode) {
+        btn.textContent = '🌐 Adjacency: ON';
+        btn.style.background = '#16a34a';
+      } else {
+        btn.textContent = '🌐 Adjacency: OFF';
+        btn.style.background = '#475569';
+      }
+      redraw();
+    }
+
+    const monsterAdjacentPaths = {
+      purple_pup: ["purple_pup_unlock_3", "purple_pup_unlock_4", "path_7", "start_9"],
+      green_growler: ["green_growler_unlock_3", "green_growler_unlock_9", "start_4"],
+      grey_hound: ["grey_hound_unlock_6", "grey_hound_unlock_10", "path_7", "start_7", "start_3"],
+      white_wolf: ["white_wolf_unlock_5", "white_wolf_unlock_8", "path_7", "path_6"],
+      primal_hare: ["path_7", "path_6", "2/12"],
+      punk_hare: ["path_8", "path_9", "3/11"],
+      beefy_bearpion_boss: ["boss_unlock_3", "boss_unlock_4", "boss_unlock_5", "boss_unlock_8", "boss_unlock_11", "path_9", "path_10"]
+    };
+
+    function isMonsterFullyDefeated(prefix) {
+      const normPrefix = prefix.toLowerCase();
+      const hpBoxes = points.filter(p => {
+        const l = p.label.toLowerCase();
+        return l.startsWith(normPrefix) && !l.endsWith('_target') && !l.includes('reward') && !l.includes('unlock');
+      });
+      return hpBoxes.length > 0 && hpBoxes.every(p => p.marked);
+    }
+
+    function checkMonsterDefeatAndNotify(prefix) {
+      if (isMonsterFullyDefeated(prefix)) {
+        const rewardNode = points.find(p => p.label.toLowerCase() === `${prefix.toLowerCase()}_reward_1st` && p.state === 0);
+        if (rewardNode) {
+          rewardNode.state = 1;
+          markHistory.push({ pt: rewardNode, consumedDice: null, linkedPts: [], isRewardState: true });
+        }
+        
+        const norm = prefix.toLowerCase();
+        let gemCount = 2;
+        if (norm.includes('hare')) gemCount = 3;
+        else if (norm.includes('bearpion') || norm.includes('boss')) gemCount = 6;
+        
+        if (norm.includes('bearpion') || norm.includes('boss')) {
+          showBannerNotification(`🏆 Boss Defeated! Cross off 6 reward gems and mark 2 life point losses on your health track.`);
+        } else {
+          showBannerNotification(`🏆 Monster Defeated! Cross off ${gemCount} reward gems on your tracker.`);
+        }
+      }
+    }
+
+    function checkSpecialSpaceRewards(pt) {
+      const lbl = pt.label.toLowerCase();
+      if (lbl.startsWith('gem_') || lbl.includes('gem_space')) {
+        showBannerNotification(`💎 Gem Unlocked! Mark 1 Gem on your bottom treasure tracker.`);
+      } else if (lbl.startsWith('gold_')) {
+        showBannerNotification(`🪙 Gold Unlocked! Collect your gold bonus.`);
+      } else if (lbl.includes('double_door') || lbl.includes('chest')) {
+        showBannerNotification(`🗝️ Treasure Unlocked! Open a chest or claim your reward.`);
+      } else if (lbl.includes('perk_torch')) {
+        showBannerNotification(`🔥 Torch Perk Activated! Cross off any available space or hit an available monster.`);
+      }
+    }
+
+    function isConnectedInGraph(idA, idB) {
+      if (idA === idB) return true;
+      if (boardConnections[idA] && boardConnections[idA].includes(idB)) return true;
+      if (boardConnections[idB] && boardConnections[idB].includes(idA)) return true;
+      return false;
+    }
+
+    function isAdjacentToMarked(targetPoint) {
+      if (!strictAdjacencyMode) return true;
+      const lbl = targetPoint.label.toLowerCase();
+      
+      if (lbl.startsWith('start_')) return true;
+
+      const targetId = targetPoint.id;
+
+      if (lbl.endsWith('_target')) {
+        const prefix = getMonsterPrefixFromTarget(targetPoint.label);
+        const validPaths = monsterAdjacentPaths[prefix] || [];
+        return points.some(p => p.marked && validPaths.includes(p.label.toLowerCase()) && isConnectedInGraph(targetId, p.id));
+      }
+
+      return points.some(p => {
+        if (!p.marked) return false;
+
+        if (isMonsterHpBox(p.label)) {
+          const prefix = getMonsterPrefixFromTarget(p.label);
+          if (prefix && !isMonsterFullyDefeated(prefix)) {
+            return false;
+          }
+        }
+
+        return isConnectedInGraph(targetId, p.id);
+      });
+    }
+
+    const img = document.getElementById('board-img');
+    const canvas = document.getElementById('overlay-canvas');
+    const ctx = canvas.getContext('2d');
+
+    const monsterRules = {
+      purple_pup: { base: [11], locked: { 3: "purple_pup_unlock_3", 4: "purple_pup_unlock_4" } },
+      green_growler: { base: [5], locked: { 3: "green_growler_unlock_3", 9: "green_growler_unlock_9" } },
+      grey_hound: { base: [8], locked: { 6: "grey_hound_unlock_6", 10: "grey_hound_unlock_10" } },
+      white_wolf: { base: [4], locked: { 5: "white_wolf_unlock_5", 8: "white_wolf_unlock_8" } },
+      primal_hare: { base: [2, 12], locked: {} },
+      punk_hare: { base: [3, 11], locked: {} },
+      beefy_bearpion_boss: {
+        base: [],
+        locked: { 3: "boss_unlock_3", 4: "boss_unlock_4", 5: "boss_unlock_5", 8: "boss_unlock_8", 11: "boss_unlock_11" }
+      }
+    };
+
+    const rewardGemValues = {
+      purple_pup: { 1: 2, 2: 1 },
+      green_growler: { 1: 2, 2: 1 },
+      grey_hound: { 1: 2, 2: 1 },
+      white_wolf: { 1: 2, 2: 1 },
+      primal_hare: { 1: 3, 2: 1 },
+      punk_hare: { 1: 3, 2: 1 },
+      beefy_bearpion_boss: { 1: 6, 2: 3 },
+      fist: { 1: 3, 2: 1 },
+      connect: { 1: 3, 2: 1 }
+    };
+
+    function syncCanvasSize() {
+      const w = img.clientWidth;
+      const h = img.clientHeight;
+      if (w > 0 && h > 0) {
+        canvas.width = w;
+        canvas.height = h;
+      }
+    }
+
+    function isBottomGemGridPoint(label) {
+      const num = parseInt(label.replace(/\D/g, ''));
+      return label.toLowerCase().startsWith('gem_') && !label.toLowerCase().includes('space') && num >= 1 && num <= 45;
+    }
+
+    function isMonsterHpBox(label) {
+      const l = label.toLowerCase();
+      const isMonsterName = l.includes('pup') || l.includes('growler') || l.includes('hare') || l.includes('wolf') || l.includes('hound') || l.includes('bearpion') || l.includes('boss');
+      return isMonsterName && !l.endsWith('_target') && !l.includes('reward') && !l.includes('unlock');
+    }
+
+    function isBookkeepingPoint(label) {
+      const l = label.toLowerCase();
+      return l.startsWith('perk_') || l.startsWith('black_dice') || l.startsWith('life_point') || (l.startsWith('fist_') && !l.includes('double') && !l.includes('reward')) || l.includes('reward') || isBottomGemGridPoint(label) || l === 'life_loss_points' || l === 'total_points';
+    }
+
+    function getPipLayoutHtml(number, isBlack) {
+      const dot = `<div class="pip"></div>`;
+      const empty = `<div class="pip-empty"></div>`;
+      let gridContent = '';
+      switch(number) {
+        case 1: gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`; break;
+        case 2: gridContent = `${dot}${empty}${empty}${empty}${empty}${empty}${empty}${empty}${dot}`; break;
+        case 3: gridContent = `${dot}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${dot}`; break;
+        case 4: gridContent = `${dot}${empty}${dot}${empty}${empty}${empty}${dot}${empty}${dot}`; break;
+        case 5: gridContent = `${dot}${empty}${dot}${empty}${dot}${empty}${dot}${empty}${dot}`; break;
+        case 6: gridContent = `${dot}${empty}${dot}${dot}${empty}${dot}${dot}${empty}${dot}`; break;
+        default: gridContent = `${empty}${empty}${empty}${empty}${dot}${empty}${empty}${empty}${empty}`;
+      }
+      return `<div class="pip-grid">${gridContent}</div>`;
+    }
+
+    function toggleDieSelection(id) {
+      if (isRolling) return;
+      if (selectedDiceIds.includes(id)) {
+        selectedDiceIds = selectedDiceIds.filter(dId => dId !== id);
+      } else {
+        if (selectedDiceIds.length >= 2) selectedDiceIds.shift();
+        selectedDiceIds.push(id);
+      }
+      renderDiceTray(poolDice, false);
+      redraw();
+    }
+
+    function renderDiceTray(diceList, animating = false) {
+      const tray = document.getElementById('diceTray');
+      const noteEl = document.getElementById('dice-duplicate-note');
+
+      if (!diceList || diceList.length === 0) {
+        tray.innerHTML = [0, 1, 2, 3, 4].map(id => `
+          <div class="${id === 4 ? 'die black' : 'die'}" style="opacity:0.4;">
+            <span style="font-size:20px; color:${id === 4 ? '#64748b' : '#94a3b8'};">-</span>
+          </div>
+        `).join('');
+        if (noteEl) noteEl.innerHTML = '';
+        return;
+      }
+
+      tray.innerHTML = diceList.map((d, i) => {
+        const isBlack = (d.id === 4);
+        const isSelected = selectedDiceIds.includes(d.id);
+        const bgClass = `${isBlack ? 'die black' : 'die'} ${isSelected ? 'selected' : ''}`;
+        const animClass = animating ? 'rolling-tumble' : '';
+        const delayStyle = `animation-delay: ${i * 0.08}s;`;
+
+        return `
+          <div class="${bgClass} ${animClass}" style="${delayStyle} cursor:pointer;" onclick="toggleDieSelection(${d.id})">
+            ${getPipLayoutHtml(d.val, isBlack)}
+          </div>
+        `;
+      }).join('');
+
+      if (noteEl) {
+        const sums = getValidPairs(diceList).map(p => p.sum);
+        const hasDuplicates = sums.some((s, idx) => sums.indexOf(s) !== idx);
+        if (hasDuplicates && selectedDiceIds.length === 0) {
+          noteEl.style.color = '#38bdf8';
+          noteEl.innerHTML = '⚠️ Duplicate sums detected! Click 2 dice to choose your pair.';
+        } else if (selectedDiceIds.length > 0) {
+          noteEl.style.color = '#4ade80';
+          noteEl.innerHTML = '✅ Pair selected! Click your target board space.';
+        } else {
+          noteEl.innerHTML = '';
+        }
+      }
+    }
+
+    function getValidPairs(diceArr) {
+      if (selectedDiceIds.length === 2) {
+        const selectedObj = diceArr.filter(d => selectedDiceIds.includes(d.id));
+        if (selectedObj.length === 2) {
+          const usesBlack = selectedObj.some(d => d.id === 4);
+          return [{
+            sum: selectedObj[0].val + selectedObj[1].val,
+            isDouble: selectedObj[0].val === selectedObj[1].val,
+            usesBlack: usesBlack,
+            diceObjects: selectedObj
+          }];
+        }
+      }
+
+      const pairs = [];
+      for (let i = 0; i < diceArr.length; i++) {
+        for (let j = i + 1; j < diceArr.length; j++) {
+          const usesBlack = diceArr[i].id === 4 || diceArr[j].id === 4;
+          pairs.push({
+            sum: diceArr[i].val + diceArr[j].val,
+            isDouble: diceArr[i].val === diceArr[j].val,
+            usesBlack: usesBlack,
+            diceObjects: [diceArr[i], diceArr[j]]
+          });
+        }
+      }
+      return pairs;
+    }
+
+    function consumeDiceForSum(sumVal, isDoubleReq, isDoubleDoor) {
       const valid = getValidPairs(poolDice);
       let match = null;
 
@@ -26,3 +1282,565 @@ function consumeDiceForSum(sumVal, isDoubleReq, isDoubleDoor) {
       }
       return null;
     }
+
+    function getMonsterPrefixFromTarget(targetLabel) {
+      const l = targetLabel.toLowerCase();
+      if (l.includes('purple')) return 'purple_pup';
+      if (l.includes('growler')) return 'green_growler';
+      if (l.includes('hound')) return 'grey_hound';
+      if (l.includes('wolf')) return 'white_wolf';
+      if (l.includes('primal')) return 'primal_hare';
+      if (l.includes('punk')) return 'punk_hare';
+      if (l.includes('bearpion') || l.includes('boss')) return 'beefy_bearpion_boss';
+      return '';
+    }
+
+    function getNextUnmarkedMonsterBox(prefix) {
+      const targetPrefix = prefix.toLowerCase();
+      const hpPoints = points.filter(p => {
+        const lbl = p.label.toLowerCase();
+        return lbl.startsWith(targetPrefix) && !lbl.endsWith('_target') && !lbl.includes('reward') && !lbl.includes('unlock');
+      });
+      return hpPoints.find(p => !p.marked);
+    }
+
+    function getActiveNumbersForMonster(prefix) {
+      const rule = monsterRules[prefix];
+      if (!rule) return [];
+      const activeNums = [...rule.base];
+      for (const [numStr, unlockLabel] of Object.entries(rule.locked)) {
+        const num = parseInt(numStr);
+        const unlockPoint = points.find(p => p.label.toLowerCase() === unlockLabel.toLowerCase());
+        if (unlockPoint && unlockPoint.marked) {
+          if (!activeNums.includes(num)) activeNums.push(num);
+        }
+      }
+      return activeNums;
+    }
+
+    function getHighestUnmarkedLifePoint() {
+      const lifePoints = points.filter(p => p.label.toLowerCase().startsWith('life_point'));
+      return lifePoints.find(p => !p.marked);
+    }
+
+    function triggerAutoFistMark() {
+      const openFist = points.find(p => p.label.toLowerCase().startsWith('fist_') && !p.label.toLowerCase().includes('double') && !p.label.toLowerCase().includes('reward') && !p.marked);
+      if (openFist) {
+        openFist.marked = true;
+        return openFist;
+      }
+      return null;
+    }
+
+    function showBannerNotification(text) {
+      const banner = document.getElementById('reward-banner');
+      banner.textContent = text;
+      banner.style.display = 'block';
+    }
+
+    function toggleEraserMode() {
+      eraserMode = !eraserMode;
+      const btn = document.getElementById('btn-eraser');
+      if (eraserMode) {
+        btn.textContent = '🔓 Eraser: ON';
+        btn.style.background = '#e11d48';
+      } else {
+        btn.textContent = '🔒 Eraser: OFF';
+        btn.style.background = '#475569';
+      }
+      redraw();
+    }
+
+    function toggleFreeMarkMode() {
+      freeMarkMode = !freeMarkMode;
+      const btn = document.getElementById('btn-freemark');
+      if (freeMarkMode) {
+        btn.textContent = '✏️ Free Mark: ON';
+        btn.style.background = '#e11d48';
+      } else {
+        btn.textContent = '✏️ Free Mark: OFF';
+        btn.style.background = '#475569';
+      }
+      redraw();
+    }
+
+    function updatePairsPanel(validPairs) {
+      const container = document.getElementById('pairs-container');
+      if (selectedDiceIds.length === 2 && validPairs.length === 1) {
+        const activePair = validPairs[0];
+        const valL = `${activePair.sum}${activePair.isDouble ? ' (Dbl)' : ''}`;
+        container.innerHTML = `
+          <div>
+            <strong>Interactive Selection:</strong><br>
+            <span class="pair-tag ${activePair.usesBlack ? 'tag-black' : 'tag-white'}">${valL}</span>
+            <span style="display:inline-block; margin-left:6px; color:#a1a1aa; font-size:11px;">(Selected)</span>
+          </div>
+        `;
+        return;
+      }
+
+      if (!validPairs || validPairs.length === 0) {
+        container.innerHTML = '<div>Roll dice to see available combinations.</div>';
+        return;
+      }
+
+      const whitePairs = [];
+      const blackPairs = [];
+      validPairs.forEach(p => {
+        const label = `${p.sum}${p.isDouble ? ' (Dbl)' : ''}`;
+        if (p.usesBlack) {
+          if (!blackPairs.includes(label)) blackPairs.push(label);
+        } else {
+          if (!whitePairs.includes(label)) whitePairs.push(label);
+        }
+      });
+
+      let html = '';
+      if (whitePairs.length > 0) {
+        html += `<div><strong>Using only White Dice:</strong><br>`;
+        whitePairs.forEach(lbl => html += `<span class="pair-tag tag-white">${lbl}</span>`);
+        html += `</div>`;
+      }
+      if (blackPairs.length > 0) {
+        html += `<div style="margin-top:6px;"><strong>Including the Black Die:</strong><br>`;
+        blackPairs.forEach(lbl => html += `<span class="pair-tag tag-black">${lbl}</span>`);
+        html += `</div>`;
+      }
+      container.innerHTML = html;
+    }
+
+    function drawGreenCheckmark(px, py, radius) {
+      ctx.fillStyle = '#16a34a';
+      ctx.beginPath();
+      ctx.arc(px, py, radius * 1.1, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = Math.max(2, radius * 0.35);
+      ctx.beginPath();
+      ctx.moveTo(px - radius * 0.4, py);
+      ctx.lineTo(px - radius * 0.1, py + radius * 0.35);
+      ctx.lineTo(px + radius * 0.4, py - radius * 0.35);
+      ctx.stroke();
+    }
+
+    function redraw() {
+      syncCanvasSize();
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
+      updatePairsPanel(validPairs);
+
+      points.forEach((p, index) => {
+        const px = p.x * canvas.width;
+        const py = p.y * canvas.height;
+        const radius = Math.max(8, canvas.width * 0.012);
+
+        const isTargetZone = p.label.toLowerCase().endsWith('_target');
+        const isHpBox = isMonsterHpBox(p.label);
+        const isBookkeeping = isBookkeepingPoint(p.label);
+        const isTextBox = p.label === 'life_loss_points' || p.label === 'total_points';
+
+        let isHighlighted = false;
+        let isBlackDieMove = false;
+
+        if (validPairs.length > 0 && !p.marked && !isHpBox && !isBookkeeping) {
+          if (isAdjacentToMarked(p)) {
+            const numVal = parseInt(p.label.replace(/\D/g, ''));
+            const isDoubleReq = p.label.toLowerCase().includes('double');
+            const isDoubleDoor = p.label.toLowerCase() === 'double_door';
+
+            if (!isTargetZone) {
+              const matches = validPairs.filter(pair => {
+                if (isDoubleDoor) return pair.isDouble;
+                if (numVal && pair.sum === numVal) return isDoubleReq ? pair.isDouble : true;
+                if (isDoubleReq && !numVal) return pair.isDouble;
+                return false;
+              });
+
+              if (matches.length > 0) {
+                isHighlighted = true;
+                isBlackDieMove = matches.every(m => m.usesBlack);
+              }
+            } else {
+              const prefix = getMonsterPrefixFromTarget(p.label);
+              if (prefix) {
+                const nextHp = getNextUnmarkedMonsterBox(prefix);
+                if (nextHp) {
+                  const activeNums = getActiveNumbersForMonster(prefix);
+                  const matches = validPairs.filter(pair => activeNums.includes(pair.sum));
+                  if (matches.length > 0) {
+                    isHighlighted = true;
+                    isBlackDieMove = matches.every(m => m.usesBlack);
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        if (isHighlighted) {
+          ctx.fillStyle = isBlackDieMove ? 'rgba(168, 85, 247, 0.45)' : 'rgba(234, 179, 8, 0.45)';
+          ctx.strokeStyle = isBlackDieMove ? '#a855f7' : '#eab308';
+          ctx.lineWidth = 2;
+          ctx.beginPath();
+          ctx.arc(px, py, isTargetZone ? radius * 1.5 : radius, 0, Math.PI * 2);
+          ctx.fill(); ctx.stroke();
+        }
+
+        if (p.label.toLowerCase().includes('reward')) {
+          if (p.state === 1) {
+            drawGreenCheckmark(px, py, radius);
+            return;
+          } else if (p.state === 2) {
+            ctx.strokeStyle = playerColor;
+            ctx.lineWidth = Math.max(2, canvas.width / 300);
+            ctx.beginPath();
+            ctx.moveTo(px - radius, py - radius); ctx.lineTo(px + radius, py + radius);
+            ctx.moveTo(px + radius, py - radius); ctx.lineTo(px - radius, py + radius);
+            ctx.stroke();
+            return;
+          }
+        }
+
+        if (isTextBox && p.textValue !== "") {
+          ctx.fillStyle = playerColor;
+          ctx.font = `bold ${Math.max(12, canvas.width / 75)}px sans-serif`;
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(p.textValue, px, py);
+          return;
+        }
+
+        if (p.marked) {
+          if (isHpBox || p.label.toLowerCase().startsWith('life_point')) {
+            ctx.fillStyle = playerColor;
+            ctx.fillRect(px - radius/2, py - radius/2, radius, radius);
+          } else {
+            ctx.strokeStyle = playerColor;
+            ctx.lineWidth = Math.max(2, canvas.width / 300);
+            ctx.beginPath();
+            ctx.moveTo(px - radius, py - radius); ctx.lineTo(px + radius, py + radius);
+            ctx.moveTo(px + radius, py - radius); ctx.lineTo(px - radius, py + radius);
+            ctx.stroke();
+          }
+        }
+
+        if (calibrationMode) {
+          ctx.fillStyle = p.marked ? '#22c55e' : '#ef4444';
+          ctx.beginPath();
+          ctx.arc(px, py, Math.max(4, radius * 0.6), 0, Math.PI * 2);
+          ctx.fill();
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.stroke();
+
+          ctx.fillStyle = '#ffffff';
+          ctx.font = '10px monospace';
+          ctx.fillText(`${index}: ${p.label}`, px + radius + 4, py + 3);
+        }
+      });
+    }
+
+    let draggedPointIndex = null;
+
+    canvas.addEventListener('mousedown', (e) => {
+      if (!calibrationMode) return;
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / rect.width;
+      const clickY = (e.clientY - rect.top) / rect.height;
+
+      points.forEach((p, idx) => {
+        const px = p.x * canvas.width;
+        const py = p.y * canvas.height;
+        const dist = Math.hypot(px - (clickX * canvas.width), py - (clickY * canvas.height));
+        if (dist < 20) {
+          draggedPointIndex = idx;
+        }
+      });
+    });
+
+    canvas.addEventListener('mousemove', (e) => {
+      if (!calibrationMode || draggedPointIndex === null) return;
+      const rect = canvas.getBoundingClientRect();
+      points[draggedPointIndex].x = (e.clientX - rect.left) / rect.width;
+      points[draggedPointIndex].y = (e.clientY - rect.top) / rect.height;
+      redraw();
+    });
+
+    window.addEventListener('mouseup', () => {
+      draggedPointIndex = null;
+    });
+
+    canvas.addEventListener('click', (e) => {
+      if (calibrationMode) {
+        if (!allowEditingPoints) return;
+        const rect = canvas.getBoundingClientRect();
+        const clickX = (e.clientX - rect.left) / rect.width;
+        const clickY = (e.clientY - rect.top) / rect.height;
+
+        let clickedIdx = -1;
+        points.forEach((p, idx) => {
+          const px = p.x * canvas.width;
+          const py = p.y * canvas.height;
+          if (Math.hypot(px - (clickX * canvas.width), py - (clickY * canvas.height)) < 20) {
+            clickedIdx = idx;
+          }
+        });
+
+        if (clickedIdx >= 0) {
+          const action = prompt(`Point [${clickedIdx}] "${points[clickedIdx].label}":\nType 'edit' to rename label, 'delete' to remove point, or cancel.`);
+          if (action === 'edit') {
+            const newLbl = prompt("Enter new label:", points[clickedIdx].label);
+            if (newLbl !== null) points[clickedIdx].label = newLbl.trim();
+          } else if (action === 'delete') {
+            points.splice(clickedIdx, 1);
+          }
+          redraw();
+        } else {
+          const newLbl = prompt("Enter label for new calibration point:");
+          if (newLbl && newLbl.trim() !== '') {
+            points.push({
+              label: newLbl.trim(),
+              x: clickX,
+              y: clickY,
+              id: 'node_' + Math.random().toString(36).substr(2, 11),
+              marked: false,
+              state: 0,
+              textValue: ""
+            });
+            redraw();
+          }
+        }
+        return;
+      }
+
+      const rect = canvas.getBoundingClientRect();
+      const clickX = (e.clientX - rect.left) / rect.width;
+      const clickY = (e.clientY - rect.top) / rect.height;
+
+      const threshold = 0.03;
+      let hitIdx = -1;
+      let minDistance = threshold;
+      points.forEach((p, idx) => {
+        const dist = Math.hypot(p.x - clickX, p.y - clickY);
+        if (dist < minDistance) {
+          minDistance = dist;
+          hitIdx = idx;
+        }
+      });
+
+      if (hitIdx >= 0) {
+        const pt = points[hitIdx];
+        const lbl = pt.label.toLowerCase();
+
+        if (lbl === 'life_loss_points' || lbl === 'total_points') {
+          const val = prompt(`Enter numeric value for ${lbl.replace(/_/g, ' ')}:`, pt.textValue || "0");
+          if (val !== null) {
+            pt.textValue = val.trim();
+            markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+            redraw();
+          }
+          return;
+        }
+
+        if (pt.marked && !lbl.includes('reward')) {
+          if (eraserMode) {
+            pt.marked = false;
+            redraw();
+          }
+          return;
+        }
+
+if (freeMarkMode && !pt.marked && !lbl.includes('reward')) {
+          pt.marked = true;
+          
+          if (lbl.includes('fist')) {
+            const autoFist = triggerAutoFistMark();
+            if (autoFist) markHistory.push({ pt: autoFist, consumedDice: null, linkedPts: [] });
+          }
+
+          checkSpecialSpaceRewards(pt);
+          markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+          redraw();
+          return;
+        }
+
+        const validPairs = poolDice.length >= 2 ? getValidPairs(poolDice) : [];
+        const highlighted = isAdjacentToMarked(pt);
+
+        if (!highlighted && !isBookkeepingPoint(pt.label) && !lbl.includes('reward')) return;
+
+        if (lbl.includes('reward')) {
+          pt.state = (pt.state + 1) % 3;
+          if (pt.state === 1) {
+            let category = 'fist';
+            if (lbl.includes('connect')) category = 'connect';
+            else if (lbl.includes('boss')) category = 'beefy_bearpion_boss';
+            else if (lbl.includes('purple')) category = 'purple_pup';
+            else if (lbl.includes('green')) category = 'green_growler';
+            else if (lbl.includes('grey')) category = 'grey_hound';
+            else if (lbl.includes('white')) category = 'white_wolf';
+            else if (lbl.includes('primal')) category = 'primal_hare';
+            else if (lbl.includes('punk')) category = 'punk_hare';
+
+            const isSubSlot = lbl.endsWith('_sub');
+            const gemVal = rewardGemValues[category] ? rewardGemValues[category][isSubSlot ? 2 : 1] : 2;
+            showBannerNotification(`🏆 Claimed Reward! Mark ${gemVal} Gems on your score tracker.`);
+          }
+          markHistory.push({ pt: pt, consumedDice: null, linkedPts: [], isRewardState: true });
+          redraw();
+          return;
+        }
+
+        if (lbl.startsWith('life_point')) {
+          const highestOpen = getHighestUnmarkedLifePoint();
+          if (highestOpen) {
+            highestOpen.marked = true;
+            markHistory.push({ pt: highestOpen, consumedDice: null, linkedPts: [] });
+          }
+          redraw();
+          return;
+        }
+
+        if (isBookkeepingPoint(pt.label)) {
+          pt.marked = !pt.marked;
+          if (pt.marked) checkSpecialSpaceRewards(pt);
+          markHistory.push({ pt: pt, consumedDice: null, linkedPts: [] });
+          redraw();
+          return;
+        }
+
+        if (lbl.endsWith('_target')) {
+          const prefix = getMonsterPrefixFromTarget(pt.label);
+          const hpBox = getNextUnmarkedMonsterBox(prefix);
+
+          if (hpBox) {
+            const activeNums = getActiveNumbersForMonster(prefix);
+            const match = validPairs.find(p => activeNums.includes(p.sum));
+
+            if (match) {
+              const consumed = consumeDiceForSum(match.sum, false, false);
+              if (consumed) {
+                hpBox.marked = true;
+                markHistory.push({ pt: hpBox, consumedDice: consumed, linkedPts: [] });
+                checkMonsterDefeatAndNotify(prefix);
+                renderDiceTray(poolDice, false);
+              }
+            }
+          }
+        } else {
+          const numVal = parseInt(pt.label.replace(/\D/g, ''));
+          const isDoubleReq = lbl.includes('double');
+          const isDoubleDoor = lbl === 'double_door';
+
+          if (!pt.marked && (numVal || isDoubleDoor)) {
+            const consumed = consumeDiceForSum(numVal, isDoubleReq, isDoubleDoor);
+            if (consumed) {
+              pt.marked = true;
+              checkSpecialSpaceRewards(pt);
+
+              const linkedPts = [];
+              if (lbl.includes('fist_double')) {
+                const autoFist = triggerAutoFistMark();
+                if (autoFist) linkedPts.push(autoFist);
+              }
+              const prefix = getMonsterPrefixFromTarget(pt.label);
+              if (prefix) checkMonsterDefeatAndNotify(prefix);
+
+              markHistory.push({ pt: pt, consumedDice: consumed, linkedPts: linkedPts });
+              renderDiceTray(poolDice, false);
+            }
+          }
+        }
+      }
+      redraw();
+    });
+
+    function rollDice() {
+      if (isRolling) return;
+      isRolling = true;
+      const btn = document.getElementById('rollButton');
+      btn.disabled = true;
+
+      if (poolDice.length > 0) diceRollHistory.push([...poolDice]);
+
+      poolDice = [0,1,2,3,4].map(id => ({ id: id, val: Math.floor(Math.random() * 6) + 1 }));
+      selectedDiceIds = [];
+      renderDiceTray(poolDice, true);
+
+      setTimeout(() => {
+        renderDiceTray(poolDice, false);
+        isRolling = false;
+        btn.disabled = false;
+        document.getElementById('reward-banner').style.display = 'none';
+        redraw();
+      }, 700);
+    }
+
+    function undoDiceRoll() {
+      if (diceRollHistory.length > 0) {
+        poolDice = diceRollHistory.pop();
+        selectedDiceIds = [];
+        renderDiceTray(poolDice, false);
+        redraw();
+      }
+    }
+
+    function undoLastAction() {
+      if (markHistory.length > 0) {
+        const last = markHistory.pop();
+        if (last.isRewardState) {
+          last.pt.state = (last.pt.state + 2) % 3;
+        } else {
+          last.pt.marked = false;
+          if (last.pt.textValue !== undefined) last.pt.textValue = "";
+        }
+        if (last.linkedPts) last.linkedPts.forEach(p => p.marked = false);
+        if (last.consumedDice) {
+          last.consumedDice.forEach(d => {
+            if (!poolDice.some(existing => existing.id === d.id)) poolDice.push(d);
+          });
+          poolDice.sort((a, b) => a.id - b.id);
+        }
+        selectedDiceIds = [];
+        document.getElementById('reward-banner').style.display = 'none';
+        renderDiceTray(poolDice, false);
+        redraw();
+      }
+    }
+
+    function clearMarks() {
+      if (confirm("Reset all marked spaces and restart intro?")) {
+        points.forEach(p => { p.marked = false; p.state = 0; p.textValue = ""; });
+        markHistory = [];
+        diceRollHistory = [];
+        poolDice = [];
+        selectedDiceIds = [];
+        document.getElementById('reward-banner').style.display = 'none';
+        renderDiceTray(poolDice, false);
+        redraw();
+        startIntroShowcase();
+      }
+    }
+
+    window.addEventListener('keydown', (e) => {
+      if (e.code === 'Space' && document.activeElement.tagName !== 'BUTTON') {
+        e.preventDefault();
+        rollDice();
+      }
+    });
+
+    img.onload = () => {
+      syncCanvasSize();
+      poolDice = [];
+      selectedDiceIds = [];
+      renderDiceTray(poolDice, false);
+      redraw();
+      startIntroShowcase();
+    };
+
+    window.addEventListener('resize', () => { syncCanvasSize(); redraw(); });
+  </script>
+</body>
+</html>
